@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-detail">
+  {% if content.artwork_url %}
+    <img src="{{ content.artwork_url }}" alt="{{ content.title }} artwork" class="img-fluid mb-3">
+  {% else %}
+    <!-- Placeholder image if no artwork_url is provided -->
+    <img src="/static/images/placeholder.jpg" alt="Placeholder image" class="img-fluid mb-3">
+  {% endif %}
+
+  {% if content_type == 'episode' %}
+    <h2>{{ content.title }} (Episode {{ content.episode_number }})</h2>
+  {% elif content_type == 'movie' %}
+    <h2>{{ content.title }}</h2>
+  {% endif %}
+  
+  <p><!-- Additional metadata (like release date, description, etc.) can be shown here --></p>
+
+  <h4>Your Note</h4>
+  <form method="POST">
+    <div class="form-group">
+      <textarea name="note" class="form-control" rows="4">
+        {% for note in content.notes if note.user_id == current_user.id %}
+          {{ note.content }}
+        {% endfor %}
+      </textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Note</button>
+  </form>
+</div>
+{% endblock %}

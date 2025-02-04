@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dashboard</h2>
+
+<h3>Shows</h3>
+<ul class="list-group">
+  {% for show in shows %}
+  <li class="list-group-item">
+    <strong>{{ show.title }}</strong>
+    {% for season in show.seasons %}
+      <div class="ml-3">Season {{ season.number }}
+        <ul>
+          {% for episode in season.episodes %}
+            <li>
+              <a href="{{ url_for('main.content_detail', content_type='episode', content_id=episode.id) }}">
+                Episode {{ episode.episode_number }}: {{ episode.title }}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  </li>
+  {% endfor %}
+</ul>
+
+<h3>Movies</h3>
+<ul class="list-group">
+  {% for movie in movies %}
+  <li class="list-group-item">
+    <a href="{{ url_for('main.content_detail', content_type='movie', content_id=movie.id) }}">
+      {{ movie.title }}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}
