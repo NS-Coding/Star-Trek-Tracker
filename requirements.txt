@@ -3,6 +3,6 @@ Flask-Login
 Flask-SQLAlchemy
 psycopg2-binary
 Flask-WTF
-cinemagoer
+git+https://github.com/hdantas/cinemagoer.git@fix/episodes-parsing#egg=cinemagoer
 gunicorn
 email-validator
