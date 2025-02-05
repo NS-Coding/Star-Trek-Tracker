@@ -25,8 +25,9 @@ class Show(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     title       = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text)
-    order       = db.Column(db.Integer)  # For checklist ordering
-    artwork_url = db.Column(db.String(256))  # Artwork placeholder URL
+    order       = db.Column(db.Integer)
+    artwork_url = db.Column(db.String(256))
+    imdb_rating = db.Column(db.Float)  # New column for the overall series rating
     seasons     = db.relationship('Season', backref='show', lazy=True)
 
     def __repr__(self):
@@ -34,10 +35,11 @@ class Show(db.Model):
 
 class Season(db.Model):
     __tablename__ = 'seasons'
-    id      = db.Column(db.Integer, primary_key=True)
-    number  = db.Column(db.Integer, nullable=False)
-    show_id = db.Column(db.Integer, db.ForeignKey('shows.id'), nullable=False)
-    episodes = db.relationship('Episode', backref='season', lazy=True)
+    id          = db.Column(db.Integer, primary_key=True)
+    number      = db.Column(db.Integer, nullable=False)
+    show_id     = db.Column(db.Integer, db.ForeignKey('shows.id'), nullable=False)
+    imdb_rating = db.Column(db.Float)  # New: average rating for the season
+    episodes    = db.relationship('Episode', backref='season', lazy=True)
 
     def __repr__(self):
         return f'<Season {self.number} of Show {self.show_id}>'
@@ -45,11 +47,12 @@ class Season(db.Model):
 class Episode(db.Model):
     __tablename__ = 'episodes'
     id             = db.Column(db.Integer, primary_key=True)
-    title          = db.Column(db.String(128), nullable=False)
+    title          = db.Column(db.String(256), nullable=False)
     episode_number = db.Column(db.Integer)
     season_id      = db.Column(db.Integer, db.ForeignKey('seasons.id'), nullable=False)
     air_date       = db.Column(db.Date)
-    artwork_url    = db.Column(db.String(256))  # Artwork placeholder URL for episodes
+    artwork_url    = db.Column(db.String(256))
+    imdb_rating    = db.Column(db.Float)  # New: IMDb rating for this episode
     ratings        = db.relationship('Rating', backref='episode', lazy=True)
     notes          = db.relationship('Note', backref='episode', lazy=True)
 
@@ -62,8 +65,9 @@ class Movie(db.Model):
     title        = db.Column(db.String(128), nullable=False)
     release_date = db.Column(db.Date)
     description  = db.Column(db.Text)
-    order        = db.Column(db.Integer)  # For checklist ordering
-    artwork_url  = db.Column(db.String(256))  # Artwork placeholder URL for movies
+    order        = db.Column(db.Integer)
+    artwork_url  = db.Column(db.String(256))
+    imdb_rating  = db.Column(db.Float)  # New: IMDb rating for the movie
     ratings      = db.relationship('Rating', backref='movie', lazy=True)
     notes        = db.relationship('Note', backref='movie', lazy=True)
 
