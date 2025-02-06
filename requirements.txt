@@ -6,3 +6,5 @@ Flask-WTF
 git+https://github.com/hdantas/cinemagoer.git@fix/episodes-parsing#egg=cinemagoer
 gunicorn
 email-validator
+Flask-Migrate
+Markdown

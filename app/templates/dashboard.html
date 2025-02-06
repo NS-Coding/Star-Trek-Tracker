@@ -2,36 +2,118 @@
 {% block content %}
 <h2>Dashboard</h2>
 
-<h3>Shows</h3>
-<ul class="list-group">
-  {% for show in shows %}
-  <li class="list-group-item">
-    <strong>{{ show.title }}</strong>
-    {% for season in show.seasons %}
-      <div class="ml-3">Season {{ season.number }}
-        <ul>
-          {% for episode in season.episodes %}
-            <li>
-              <a href="{{ url_for('main.content_detail', content_type='episode', content_id=episode.id) }}">
-                Episode {{ episode.episode_number }}: {{ episode.title }}
-              </a>
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-    {% endfor %}
-  </li>
-  {% endfor %}
-</ul>
+<!-- Filter buttons -->
+<div class="mb-3">
+  <a href="{{ url_for('main.dashboard', filter='all') }}" class="btn btn-secondary btn-sm {% if filter_option=='all' %}active{% endif %}">Show All</a>
+  <a href="{{ url_for('main.dashboard', filter='unwatched') }}" class="btn btn-secondary btn-sm {% if filter_option=='unwatched' %}active{% endif %}">Unwatched Only</a>
+</div>
 
-<h3>Movies</h3>
-<ul class="list-group">
-  {% for movie in movies %}
-  <li class="list-group-item">
-    <a href="{{ url_for('main.content_detail', content_type='movie', content_id=movie.id) }}">
-      {{ movie.title }}
-    </a>
-  </li>
+<!-- Header labels for the list columns -->
+<div class="d-flex justify-content-between font-weight-bold border-bottom pb-2 mb-2">
+  <div style="width:70%;">Title</div>
+  <div style="width:30%;">Watched</div>
+</div>
+
+<div class="list-group">
+  {% for item in combined %}
+    {% if item.__class__.__name__ == 'Movie' %}
+      <!-- Movie entry -->
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+         <div class="d-flex align-items-center">
+           {% if item.artwork_url %}
+             <img src="{{ item.artwork_url }}" alt="{{ item.title }} artwork" class="img-thumbnail mr-2" style="max-height: 50px;">
+           {% endif %}
+           <a href="{{ url_for('main.content_detail', content_type='movie', content_id=item.id) }}">
+             {{ item.title }}
+           </a>
+         </div>
+         <div>
+           <form action="{{ url_for('main.toggle_watched', content_type='movie', content_id=item.id) }}" method="POST">
+              <input type="checkbox" name="watched" onchange="this.form.submit()" {% if item.watched %}checked{% endif %}>
+           </form>
+         </div>
+      </div>
+    {% elif item.__class__.__name__ == 'Show' %}
+      <!-- Show entry -->
+      <div class="list-group-item">
+         <div class="d-flex justify-content-between align-items-center">
+           <div class="d-flex align-items-center">
+             {% if item.artwork_url %}
+               <img src="{{ item.artwork_url }}" alt="{{ item.title }} artwork" class="img-thumbnail mr-2" style="max-height: 50px;">
+             {% endif %}
+             <!-- Show title as a clickable link to its notes view -->
+             <a href="{{ url_for('main.content_detail', content_type='show', content_id=item.id) }}">
+               {{ item.title }}
+             </a>
+             <!-- Carat icon (placed immediately after the title) toggles the series expansion -->
+             <button class="btn btn-link p-0 ml-2" type="button" data-toggle="collapse" data-target="#showCollapse{{ item.id }}" aria-expanded="false" aria-controls="showCollapse{{ item.id }}">
+               &#9660;
+             </button>
+           </div>
+           <div>
+             <!-- Clickable checkbox for the show -->
+             <form action="{{ url_for('main.toggle_watched', content_type='show', content_id=item.id) }}" method="POST">
+               <input type="checkbox" name="watched" onchange="this.form.submit()" {% if item.watched %}checked{% endif %}>
+             </form>
+           </div>
+         </div>
+         <!-- Collapsible area for seasons -->
+         <div class="collapse mt-2" id="showCollapse{{ item.id }}">
+            {% for season in item.seasons|sort(attribute='number') %}
+              {# If filtering by unwatched, only show seasons with at least one unwatched episode #}
+              {% if filter_option == 'unwatched' %}
+                {% set episodes = season.episodes|selectattr("watched", "equalto", False)|list %}
+              {% else %}
+                {% set episodes = season.episodes|sort(attribute='episode_number') %}
+              {% endif %}
+              {% if episodes|length > 0 %}
+              <div class="ml-3 mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="d-flex align-items-center">
+                    <!-- Season title as link -->
+                    <a href="{{ url_for('main.content_detail', content_type='season', content_id=season.id) }}">
+                      Season {{ season.number }}
+                    </a>
+                    <!-- Carat icon to expand/collapse episodes -->
+                    <button class="btn btn-link p-0 ml-2" type="button" data-toggle="collapse" data-target="#seasonCollapse{{ season.id }}" aria-expanded="false" aria-controls="seasonCollapse{{ season.id }}">
+                      &#9660;
+                    </button>
+                  </div>
+                  <div>
+                    <!-- Clickable checkbox for the season -->
+                    <form action="{{ url_for('main.toggle_watched', content_type='season', content_id=season.id) }}" method="POST">
+                      <input type="checkbox" name="watched" onchange="this.form.submit()" {% if season.watched %}checked{% endif %}>
+                    </form>
+                  </div>
+                </div>
+                <!-- Collapsible area for episodes -->
+                <div class="collapse ml-3" id="seasonCollapse{{ season.id }}">
+                   <ul class="list-group">
+                     {% for episode in episodes %}
+                       <li class="list-group-item d-flex justify-content-between align-items-center">
+                          <div class="d-flex align-items-center">
+                            {% if episode.display_artwork_url %}
+                              <img src="{{ episode.display_artwork_url }}" alt="{{ episode.title }} artwork" class="img-thumbnail mr-2" style="max-height: 50px;">
+                            {% endif %}
+                            <a href="{{ url_for('main.content_detail', content_type='episode', content_id=episode.id) }}">
+                              Episode {{ episode.episode_number }}: {{ episode.title }}
+                            </a>
+                          </div>
+                          <div>
+                            <form action="{{ url_for('main.toggle_watched', content_type='episode', content_id=episode.id) }}" method="POST">
+                               <input type="checkbox" name="watched" onchange="this.form.submit()" {% if episode.watched %}checked{% endif %}>
+                            </form>
+                          </div>
+                       </li>
+                     {% endfor %}
+                   </ul>
+                </div>
+              </div>
+              {% endif %}
+            {% endfor %}
+         </div>
+      </div>
+    {% endif %}
   {% endfor %}
-</ul>
+</div>
 {% endblock %}

@@ -1,27 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="content-detail">
-  {% if content.artwork_url %}
-    <img src="{{ content.artwork_url }}" alt="{{ content.title }} artwork" class="img-fluid mb-3">
+  {% if content_type in ['episode', 'season'] %}
+    {% set image_url = content.display_artwork_url %}
   {% else %}
-    <!-- Placeholder image if no artwork_url is provided -->
+    {% set image_url = content.artwork_url %}
+  {% endif %}
+
+  {% if image_url %}
+    <img src="{{ image_url }}" alt="{{ content.title }} artwork" class="img-fluid mb-3">
+  {% else %}
     <img src="/static/images/placeholder.jpg" alt="Placeholder image" class="img-fluid mb-3">
   {% endif %}
 
-  {% if content_type == 'episode' %}
-    <h2>{{ content.title }} (Episode {{ content.episode_number }})</h2>
-  {% elif content_type == 'movie' %}
-    <h2>{{ content.title }}</h2>
-  {% endif %}
+  <h2>
+    {% if content_type == 'episode' %}
+      {{ content.title }} (Episode {{ content.episode_number }})
+    {% else %}
+      {{ content.title }}
+    {% endif %}
+  </h2>
   
-  <p><!-- Additional metadata (like release date, description, etc.) can be shown here --></p>
-
+  <!-- Additional metadata and note form -->
   <h4>Your Note</h4>
   <form method="POST">
     <div class="form-group">
       <textarea name="note" class="form-control" rows="4">
         {% for note in content.notes if note.user_id == current_user.id %}
-          {{ note.content }}
+          <div class="formatted-note">
+            {{ note.content | markdown | safe }}
+          </div>
         {% endfor %}
       </textarea>
     </div>

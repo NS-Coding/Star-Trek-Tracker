@@ -27,19 +27,42 @@ class Show(db.Model):
     description = db.Column(db.Text)
     order       = db.Column(db.Integer)
     artwork_url = db.Column(db.String(256))
-    imdb_rating = db.Column(db.Float)  # New column for the overall series rating
+    imdb_rating = db.Column(db.Float)
     seasons     = db.relationship('Season', backref='show', lazy=True)
+    # NEW: Allow notes on shows
+    notes       = db.relationship('Note', backref='show', lazy=True)
+
+    @property
+    def watched(self):
+        if not self.seasons:
+            return False
+        return all(season.watched for season in self.seasons)
 
     def __repr__(self):
         return f'<Show {self.title}>'
-
+    
 class Season(db.Model):
     __tablename__ = 'seasons'
     id          = db.Column(db.Integer, primary_key=True)
     number      = db.Column(db.Integer, nullable=False)
     show_id     = db.Column(db.Integer, db.ForeignKey('shows.id'), nullable=False)
-    imdb_rating = db.Column(db.Float)  # New: average rating for the season
+    imdb_rating = db.Column(db.Float)
     episodes    = db.relationship('Episode', backref='season', lazy=True)
+    # NEW: Allow notes for a season
+    notes       = db.relationship('Note', backref='season', lazy=True)
+
+    @property
+    def watched(self):
+        if not self.episodes:
+            return False
+        return all(episode.watched for episode in self.episodes)
+
+    @property
+    def display_artwork_url(self):
+        """If no specific season image, fall back to the parent show artwork."""
+        if self.show and self.show.artwork_url:
+            return self.show.artwork_url
+        return None
 
     def __repr__(self):
         return f'<Season {self.number} of Show {self.show_id}>'
@@ -52,9 +75,18 @@ class Episode(db.Model):
     season_id      = db.Column(db.Integer, db.ForeignKey('seasons.id'), nullable=False)
     air_date       = db.Column(db.Date)
     artwork_url    = db.Column(db.String(256))
-    imdb_rating    = db.Column(db.Float)  # New: IMDb rating for this episode
+    imdb_rating    = db.Column(db.Float)
+    watched        = db.Column(db.Boolean, default=False)
     ratings        = db.relationship('Rating', backref='episode', lazy=True)
     notes          = db.relationship('Note', backref='episode', lazy=True)
+
+    @property
+    def display_artwork_url(self):
+        if self.artwork_url:
+            return self.artwork_url
+        if self.season and self.season.show and self.season.show.artwork_url:
+            return self.season.show.artwork_url
+        return None
 
     def __repr__(self):
         return f'<Episode {self.title}>'
@@ -67,7 +99,8 @@ class Movie(db.Model):
     description  = db.Column(db.Text)
     order        = db.Column(db.Integer)
     artwork_url  = db.Column(db.String(256))
-    imdb_rating  = db.Column(db.Float)  # New: IMDb rating for the movie
+    imdb_rating  = db.Column(db.Float)  # IMDb rating for the movie
+    watched      = db.Column(db.Boolean, default=False)  # New column for watched status
     ratings      = db.relationship('Rating', backref='movie', lazy=True)
     notes        = db.relationship('Note', backref='movie', lazy=True)
 
@@ -93,6 +126,9 @@ class Note(db.Model):
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     episode_id = db.Column(db.Integer, db.ForeignKey('episodes.id'), nullable=True)
     movie_id   = db.Column(db.Integer, db.ForeignKey('movies.id'), nullable=True)
+    # NEW: Add foreign keys for season and show notes
+    season_id  = db.Column(db.Integer, db.ForeignKey('seasons.id'), nullable=True)
+    show_id    = db.Column(db.Integer, db.ForeignKey('shows.id'), nullable=True)
     timestamp  = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
