@@ -8,12 +8,14 @@ import markdown
 db = SQLAlchemy()
 login_manager = LoginManager()
 
-def markdown_filter(text):
-    return markdown.markdown(text)
+
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    def markdown_filter(text):
+        return markdown.markdown(text)
 
     app.jinja_env.filters['markdown'] = markdown_filter
 

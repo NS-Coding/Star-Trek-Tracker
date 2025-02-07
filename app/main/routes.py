@@ -15,22 +15,32 @@ def index():
 @login_required
 def dashboard():
     filter_option = request.args.get('filter', 'all')
-    shows = Show.query.order_by(Show.order).all()
+    shows  = Show.query.order_by(Show.order).all()
     movies = Movie.query.order_by(Movie.order).all()
-    combined = shows + movies
-    # Sort by the 'order' field (if missing, use a high default)
-    combined.sort(key=lambda x: x.order if x.order is not None else 9999)
-    
+
     if filter_option == 'unwatched':
-        filtered = []
-        for item in combined:
-            if item.__class__.__name__ == 'Movie' and not item.watched:
-                filtered.append(item)
-            elif item.__class__.__name__ == 'Show' and not item.watched:
-                filtered.append(item)
-        combined = filtered
-        
+        # For movies: keep only unwatched movies
+        movies = [movie for movie in movies if not movie.watched]
+
+        # For each show, filter seasons and episodes
+        filtered_shows = []
+        for show in shows:
+            new_seasons = []
+            for season in show.seasons:
+                unwatched_eps = [ep for ep in season.episodes if not ep.watched]
+                if unwatched_eps:
+                    # Temporarily attach the filtered episodes list
+                    season.filtered_episodes = unwatched_eps
+                    new_seasons.append(season)
+            if new_seasons:
+                show.filtered_seasons = new_seasons
+                filtered_shows.append(show)
+        shows = filtered_shows
+
+    combined = shows + movies
+    combined.sort(key=lambda x: x.order if x.order is not None else 9999)
     return render_template('dashboard.html', combined=combined, filter_option=filter_option)
+
 
 @main_bp.route('/content/<string:content_type>/<int:content_id>', methods=['GET', 'POST'])
 @login_required
@@ -48,6 +58,7 @@ def content_detail(content_type, content_id):
         return redirect(url_for('main.dashboard'))
 
     if request.method == 'POST':
+        # Process note
         note_text = request.form.get('note')
         existing_note = None
         for note in content.notes:
@@ -67,10 +78,44 @@ def content_detail(content_type, content_id):
             elif content_type == 'show':
                 new_note.show_id = content.id
             db.session.add(new_note)
+
+        # Process rating
+        rating_value = request.form.get('rating')
+        if rating_value:
+            try:
+                rating_value = float(rating_value)
+                if not (0 <= rating_value <= 10):
+                    raise ValueError("Rating must be between 0 and 10.")
+            except ValueError as e:
+                flash(str(e), 'danger')
+                return redirect(url_for('main.content_detail', content_type=content_type, content_id=content_id))
+
+            # Check if the user already has a rating for this content
+            from app.models import Rating  # ensure Rating is imported
+            existing_rating = None
+            for r in content.ratings:
+                if r.user_id == current_user.id:
+                    existing_rating = r
+                    break
+            if existing_rating:
+                existing_rating.value = rating_value
+            else:
+                new_rating = Rating(value=rating_value, user_id=current_user.id)
+                if content_type == 'episode':
+                    new_rating.episode_id = content.id
+                elif content_type == 'movie':
+                    new_rating.movie_id = content.id
+                elif content_type == 'season':
+                    new_rating.season_id = content.id
+                elif content_type == 'show':
+                    new_rating.show_id = content.id
+                db.session.add(new_rating)
+
         db.session.commit()
-        flash('Your note has been saved.', 'success')
+        flash('Your note and rating have been saved.', 'success')
         return redirect(url_for('main.content_detail', content_type=content_type, content_id=content_id))
     return render_template('content_detail.html', content=content, content_type=content_type)
+
 
 @main_bp.route('/toggle_watched/<string:content_type>/<int:content_id>', methods=['POST'])
 @login_required

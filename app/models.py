@@ -31,6 +31,7 @@ class Show(db.Model):
     seasons     = db.relationship('Season', backref='show', lazy=True)
     # NEW: Allow notes on shows
     notes       = db.relationship('Note', backref='show', lazy=True)
+    ratings     = db.relationship('Rating', backref='show', lazy=True)
 
     @property
     def watched(self):
@@ -50,6 +51,7 @@ class Season(db.Model):
     episodes    = db.relationship('Episode', backref='season', lazy=True)
     # NEW: Allow notes for a season
     notes       = db.relationship('Note', backref='season', lazy=True)
+    ratings     = db.relationship('Rating', backref='season', lazy=True)
 
     @property
     def watched(self):
@@ -110,10 +112,12 @@ class Movie(db.Model):
 class Rating(db.Model):
     __tablename__ = 'ratings'
     id         = db.Column(db.Integer, primary_key=True)
-    value      = db.Column(db.Float, nullable=False)  # Supports half-star increments
+    value      = db.Column(db.Float, nullable=False)  # e.g. 0-10, decimals allowed
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     episode_id = db.Column(db.Integer, db.ForeignKey('episodes.id'), nullable=True)
     movie_id   = db.Column(db.Integer, db.ForeignKey('movies.id'), nullable=True)
+    season_id  = db.Column(db.Integer, db.ForeignKey('seasons.id'), nullable=True)
+    show_id    = db.Column(db.Integer, db.ForeignKey('shows.id'), nullable=True)
     timestamp  = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="content-detail">
+  {# Determine which image URL to use #}
   {% if content_type in ['episode', 'season'] %}
     {% set image_url = content.display_artwork_url %}
   {% else %}
@@ -20,20 +21,32 @@
       {{ content.title }}
     {% endif %}
   </h2>
-  
-  <!-- Additional metadata and note form -->
-  <h4>Your Note</h4>
+
+  <!-- Form to update rating and note -->
   <form method="POST">
+    <!-- Rating Input (displayed above the note) -->
     <div class="form-group">
-      <textarea name="note" class="form-control" rows="4">
-        {% for note in content.notes if note.user_id == current_user.id %}
-          <div class="formatted-note">
-            {{ note.content | markdown | safe }}
-          </div>
-        {% endfor %}
-      </textarea>
+      <label for="rating">Your Rating (0-10):</label>
+      <input type="number" step="0.1" min="0" max="10" name="rating" class="form-control" placeholder="Enter rating"
+             value="{% for r in content.ratings if r.user_id == current_user.id %}{{ r.value }}{% endfor %}">
     </div>
-    <button type="submit" class="btn btn-primary">Save Note</button>
+
+    <!-- Display any saved note formatted via Markdown -->
+    <div class="form-group">
+      <label for="note">Your Note</label>
+      {% if content.notes %}
+        <div class="note mb-2">
+          {% for note in content.notes if note.user_id == current_user.id %}
+            <div class="formatted-note">
+              {{ note.content | markdown | safe }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <textarea name="note" class="form-control" rows="4" placeholder="Enter your note here...">{% for note in content.notes if note.user_id == current_user.id %}{{ note.content }}{% endfor %}</textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Save Note & Rating</button>
   </form>
 </div>
 {% endblock %}
