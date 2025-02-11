@@ -2,6 +2,17 @@
 {% block content %}
 <h2>Dashboard</h2>
 
+<!-- Legend for Note Indicator -->
+<div class="mb-2">
+  <span>
+    <i class="fa fa-square" style="color: green;"></i> Your note exists
+  </span>
+  &nbsp;&nbsp;
+  <span>
+    <i class="fa fa-square" style="color: gray;"></i> No note
+  </span>
+</div>
+
 <!-- Filter buttons -->
 <div class="mb-3">
   <a href="{{ url_for('main.dashboard', filter='all') }}" class="btn btn-secondary btn-sm {% if filter_option=='all' %}active{% endif %}">Show All</a>
@@ -14,104 +25,203 @@
   <div class="col-4 text-center">Watched</div>
 </div>
 
-
 <div class="list-group">
   {% for item in combined %}
     {% if item.__class__.__name__ == 'Movie' %}
       <!-- Movie entry -->
-      <div class="list-group-item d-flex justify-content-between align-items-center">
-         <div class="d-flex align-items-center">
+      <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+         <div class="d-flex align-items-center flex-wrap">
            {% if item.artwork_url %}
-             <img src="{{ item.artwork_url }}" alt="{{ item.title }} artwork" class="img-thumbnail mr-2" style="max-height: 50px;">
+             <img src="{{ item.artwork_url }}" alt="{{ item.title }} artwork" class="img-thumbnail mr-2 mb-2 img-fluid" style="max-height: 300px;">
            {% endif %}
-           <a href="{{ url_for('main.content_detail', content_type='movie', content_id=item.id) }}">
-             {{ item.title }}
-           </a>
+           <div>
+             <a href="{{ url_for('main.content_detail', content_type='movie', content_id=item.id) }}">
+               {{ item.title }}
+             </a>
+             <!-- Display ratings -->
+             <div>
+               {% set user_rating_list = item.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
+               {% if user_rating_list|length > 0 %}
+                 {% set user_rating = user_rating_list[0].value %}
+               {% else %}
+                 {% set user_rating = None %}
+               {% endif %}
+               <small>Your Rating: {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}</small>
+             </div>
+             <div>
+               {% if item.ratings|length > 0 %}
+                 {% set avg_rating = (item.ratings|map(attribute='value')|sum / item.ratings|length) %}
+               {% else %}
+                 {% set avg_rating = None %}
+               {% endif %}
+               <small>Average Rating: {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}</small>
+             </div>
+             <div>
+               <small>IMDb Rating: {% if item.imdb_rating %}{{ item.imdb_rating|stars|safe }} ({{ "%.2f"|format(item.imdb_rating) }}){% else %}<span class="text-muted">No Rating</span>{% endif %}</small>
+             </div>
+           </div>
          </div>
-         <div>
+         <div class="d-flex align-items-center">
+           {% set user_notes = item.notes | selectattr("user_id", "equalto", current_user.id) | list %}
+           {% set has_note = user_notes|length > 0 %}
+           <i class="fa fa-square" style="color: {% if has_note %}green{% else %}gray{% endif %}; margin-right: 10px;"></i>
            <form action="{{ url_for('main.toggle_watched', content_type='movie', content_id=item.id) }}" method="POST">
-              <input type="checkbox" name="watched" onchange="this.form.submit()" {% if item.watched %}checked{% endif %}>
+             <input type="checkbox" name="watched" value="true" onchange="this.form.submit()" {% if item.watched %}checked{% endif %}>
            </form>
          </div>
       </div>
+      
     {% elif item.__class__.__name__ == 'Show' %}
       <!-- Show entry -->
-      <div class="list-group-item">
-         <div class="d-flex justify-content-between align-items-center">
-           <div class="d-flex align-items-center">
+      <div class="list-group-item d-flex flex-column">
+         <div class="d-flex justify-content-between align-items-center flex-wrap">
+           <div class="d-flex align-items-center flex-wrap">
              {% if item.artwork_url %}
-               <img src="{{ item.artwork_url }}" alt="{{ item.title }} artwork" class="img-thumbnail mr-2" style="max-height: 50px;">
+               <img src="{{ item.artwork_url }}" alt="{{ item.title }} artwork" class="img-thumbnail mr-2 mb-2 img-fluid" style="max-height: 300px;">
              {% endif %}
-             <!-- Show title as a clickable link to its notes view -->
-             <a href="{{ url_for('main.content_detail', content_type='show', content_id=item.id) }}">
-               {{ item.title }}
-             </a>
-             <!-- Carat icon (placed immediately after the title) toggles the series expansion -->
+             <div>
+               <a href="{{ url_for('main.content_detail', content_type='show', content_id=item.id) }}">
+                 {{ item.title }}
+               </a>
+               <!-- Display ratings -->
+               <div>
+                 {% set user_rating_list = item.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
+                 {% if user_rating_list|length > 0 %}
+                   {% set user_rating = user_rating_list[0].value %}
+                 {% else %}
+                   {% set user_rating = None %}
+                 {% endif %}
+                 <small>Your Rating: {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}</small>
+               </div>
+               <div>
+                 {% if item.ratings|length > 0 %}
+                   {% set avg_rating = (item.ratings|map(attribute='value')|sum / item.ratings|length) %}
+                 {% else %}
+                   {% set avg_rating = None %}
+                 {% endif %}
+                 <small>Average Rating: {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}</small>
+               </div>
+               <div>
+                 <small>IMDb Rating: {% if item.imdb_rating %}{{ item.imdb_rating|stars|safe }} ({{ "%.2f"|format(item.imdb_rating) }}){% else %}<span class="text-muted">No Rating</span>{% endif %}</small>
+               </div>
+             </div>
+             <!-- Drop-down arrow for seasons -->
              <button class="btn btn-link p-0 ml-2" type="button" data-toggle="collapse" data-target="#showCollapse{{ item.id }}" aria-expanded="false" aria-controls="showCollapse{{ item.id }}">
                &#9660;
              </button>
            </div>
-           <div>
-             <!-- Clickable checkbox for the show -->
+           <div class="d-flex align-items-center">
+             {% set user_notes = item.notes | selectattr("user_id", "equalto", current_user.id) | list %}
+             {% set has_note = user_notes|length > 0 %}
+             <i class="fa fa-square" style="color: {% if has_note %}green{% else %}gray{% endif %}; margin-right: 10px;"></i>
              <form action="{{ url_for('main.toggle_watched', content_type='show', content_id=item.id) }}" method="POST">
-               <input type="checkbox" name="watched" onchange="this.form.submit()" {% if item.watched %}checked{% endif %}>
+               <input type="checkbox" name="watched" value="true" onchange="this.form.submit()" {% if item.watched %}checked{% endif %}>
              </form>
            </div>
          </div>
          <!-- Collapsible area for seasons -->
          <div class="collapse mt-2" id="showCollapse{{ item.id }}">
           {% for season in item.seasons|sort(attribute='number') %}
-          {% if filter_option == 'unwatched' %}
-            {% set episodes = season.filtered_episodes %}
-          {% else %}
-            {% set episodes = season.episodes|sort(attribute='episode_number') %}
-          {% endif %}
-          {% if episodes and episodes|length > 0 %}
-            <!-- Render the season block with the filtered episodes -->
-            <div class="ml-3 mb-2">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                  <a href="{{ url_for('main.content_detail', content_type='season', content_id=season.id) }}">
-                    Season {{ season.number }}
-                  </a>
+            {% if filter_option == 'unwatched' %}
+              {% set episodes = season.filtered_episodes %}
+            {% else %}
+              {% set episodes = season.episodes|sort(attribute='episode_number') %}
+            {% endif %}
+            {% if episodes and episodes|length > 0 %}
+              <!-- Season block (no artwork shown) -->
+              <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                <div class="d-flex align-items-center flex-wrap">
+                  <div>
+                     <a href="{{ url_for('main.content_detail', content_type='season', content_id=season.id) }}">
+                       Season {{ season.number }}
+                     </a>
+                     <!-- Display season ratings -->
+                     <div>
+                       {% set user_rating_list = season.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
+                       {% if user_rating_list|length > 0 %}
+                         {% set user_rating = user_rating_list[0].value %}
+                       {% else %}
+                         {% set user_rating = None %}
+                       {% endif %}
+                       <small>Your Rating: {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}</small>
+                     </div>
+                     <div>
+                       {% if season.ratings|length > 0 %}
+                         {% set avg_rating = (season.ratings|map(attribute='value')|sum / season.ratings|length) %}
+                       {% else %}
+                         {% set avg_rating = None %}
+                       {% endif %}
+                       <small>Average Rating: {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}</small>
+                     </div>
+                     <div>
+                       <small>IMDb Rating: {% if season.imdb_rating %}{{ season.imdb_rating|stars|safe }} ({{ "%.2f"|format(season.imdb_rating) }}){% else %}<span class="text-muted">No Rating</span>{% endif %}</small>
+                     </div>
+                  </div>
+                  <!-- Season drop-down arrow -->
                   <button class="btn btn-link p-0 ml-2" type="button" data-toggle="collapse" data-target="#seasonCollapse{{ season.id }}" aria-expanded="false" aria-controls="seasonCollapse{{ season.id }}">
                     &#9660;
                   </button>
                 </div>
-                <div>
+                <div class="d-flex align-items-center">
+                  {% set user_notes = season.notes | selectattr("user_id", "equalto", current_user.id) | list %}
+                  {% set has_note = user_notes|length > 0 %}
+                  <i class="fa fa-square" style="color: {% if has_note %}green{% else %}gray{% endif %}; margin-right: 10px;"></i>
                   <form action="{{ url_for('main.toggle_watched', content_type='season', content_id=season.id) }}" method="POST">
-                    <input type="checkbox" name="watched" onchange="this.form.submit()" {% if season.watched %}checked{% endif %}>
+                    <input type="checkbox" name="watched" value="true" onchange="this.form.submit()" {% if season.watched %}checked{% endif %}>
                   </form>
                 </div>
               </div>
+              <!-- Collapsible area for episodes within this season (no artwork shown) -->
               <div class="collapse ml-3" id="seasonCollapse{{ season.id }}">
-                 <ul class="list-group">
-                   {% for episode in episodes %}
-                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                          {% if episode.display_artwork_url %}
-                            <img src="{{ episode.display_artwork_url }}" alt="{{ episode.title }} artwork" class="img-thumbnail mr-2" style="max-height: 50px;">
-                          {% endif %}
-                          <a href="{{ url_for('main.content_detail', content_type='episode', content_id=episode.id) }}">
-                            Episode {{ episode.episode_number }}: {{ episode.title }}
-                          </a>
-                        </div>
-                        <div>
-                          <form action="{{ url_for('main.toggle_watched', content_type='episode', content_id=episode.id) }}" method="POST">
-                             <input type="checkbox" name="watched" onchange="this.form.submit()" {% if episode.watched %}checked{% endif %}>
-                          </form>
-                        </div>
-                     </li>
-                   {% endfor %}
-                 </ul>
+                   <ul class="list-group">
+                     {% for episode in episodes %}
+                       <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                          <div class="d-flex align-items-center flex-wrap">
+                            <div>
+                              <a href="{{ url_for('main.content_detail', content_type='episode', content_id=episode.id) }}">
+                                Episode {{ episode.episode_number }}: {{ episode.title }}
+                              </a>
+                              <!-- Episode ratings -->
+                              <div>
+                                {% set user_rating_list = episode.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
+                                {% if user_rating_list|length > 0 %}
+                                  {% set user_rating = user_rating_list[0].value %}
+                                {% else %}
+                                  {% set user_rating = None %}
+                                {% endif %}
+                                <small>Your Rating: {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}</small>
+                              </div>
+                              <div>
+                                {% if episode.ratings|length > 0 %}
+                                  {% set avg_rating = (episode.ratings|map(attribute='value')|sum / episode.ratings|length) %}
+                                {% else %}
+                                  {% set avg_rating = None %}
+                                {% endif %}
+                                <small>Average Rating: {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}</small>
+                              </div>
+                              <div>
+                                <small>IMDb Rating: {% if episode.imdb_rating %}{{ episode.imdb_rating|stars|safe }} ({{ "%.2f"|format(episode.imdb_rating) }}){% else %}<span class="text-muted">No Rating</span>{% endif %}</small>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="d-flex align-items-center">
+                            {% set user_notes = episode.notes | selectattr("user_id", "equalto", current_user.id) | list %}
+                            {% set has_note = user_notes|length > 0 %}
+                            <i class="fa fa-square" style="color: {% if has_note %}green{% else %}gray{% endif %}; margin-right: 10px;"></i>
+                            <form action="{{ url_for('main.toggle_watched', content_type='episode', content_id=episode.id) }}" method="POST">
+                              <input type="checkbox" name="watched" value="true" onchange="this.form.submit()" {% if episode.watched %}checked{% endif %}>
+                            </form>
+                          </div>
+                       </li>
+                     {% endfor %}
+                   </ul>
               </div>
-            </div>
-          {% endif %}
-        {% endfor %}
-        
+            {% endif %}
+          {% endfor %}
          </div>
       </div>
     {% endif %}
   {% endfor %}
 </div>
+
 {% endblock %}

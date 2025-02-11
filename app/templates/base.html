@@ -2,10 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <!-- Ensure mobile responsiveness -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Star Trek Viewing Tracker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Bootstrap CSS from CDN -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://url.us.m.mimecastprotect.com/s/njHYCXDAx5H4W86KzfksJTW1gY7?domain=maxcdn.bootstrapcdn.com">
+    <!-- EasyMDE CSS for Markdown editor -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Bootstrap CSS from CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
   </head>
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -55,8 +61,11 @@
       {% block content %}{% endblock %}
     </div>
     <!-- Bootstrap JS and dependencies -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://url.us.m.mimecastprotect.com/s/N0DcCYEBp5IDwn0l4sMtLTxVQBR?domain=code.jquery.com"></script>
+    <script src="https://url.us.m.mimecastprotect.com/s/mYtCCZ6DO0f70kmgpFPu0TBNw8i?domain=cdn.jsdelivr.net"></script>
+    <script src="https://url.us.m.mimecastprotect.com/s/ROM8C1wz14c6lPjG9IyCyTVZVN7?domain=maxcdn.bootstrapcdn.com"></script>
+    <!-- EasyMDE JS -->
+    <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+    {% block scripts %}{% endblock %}
   </body>
 </html>

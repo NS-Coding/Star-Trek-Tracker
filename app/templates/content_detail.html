@@ -1,13 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="content-detail">
-  {# Determine which image URL to use #}
+  <!-- Artwork -->
   {% if content_type in ['episode', 'season'] %}
     {% set image_url = content.display_artwork_url %}
   {% else %}
     {% set image_url = content.artwork_url %}
   {% endif %}
-
   {% if image_url %}
     <img src="{{ image_url }}" alt="{{ content.title }} artwork" class="img-fluid mb-3">
   {% else %}
@@ -22,31 +21,70 @@
     {% endif %}
   </h2>
 
-  <!-- Form to update rating and note -->
+  <!-- Current user's review form -->
+  <h3>Your Review</h3>
   <form method="POST">
-    <!-- Rating Input (displayed above the note) -->
     <div class="form-group">
       <label for="rating">Your Rating (0-10):</label>
       <input type="number" step="0.1" min="0" max="10" name="rating" class="form-control" placeholder="Enter rating"
              value="{% for r in content.ratings if r.user_id == current_user.id %}{{ r.value }}{% endfor %}">
     </div>
-
-    <!-- Display any saved note formatted via Markdown -->
     <div class="form-group">
       <label for="note">Your Note</label>
-      {% if content.notes %}
-        <div class="note mb-2">
-          {% for note in content.notes if note.user_id == current_user.id %}
-            <div class="formatted-note">
-              {{ note.content | markdown | safe }}
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-      <textarea name="note" class="form-control" rows="4" placeholder="Enter your note here...">{% for note in content.notes if note.user_id == current_user.id %}{{ note.content }}{% endfor %}</textarea>
+      <!-- The textarea is given an id "noteEditor" so EasyMDE can attach to it -->
+      <textarea id="noteEditor" name="note" class="form-control" rows="4" placeholder="Enter your note here...">
+{% for note in content.notes if note.user_id == current_user.id %}{{ note.content }}{% endfor %}
+      </textarea>
     </div>
-    
     <button type="submit" class="btn btn-primary">Save Note & Rating</button>
   </form>
+
+  <!-- Display aggregated ratings -->
+  <div class="mt-4">
+    <h4>Average Rating:
+      {% if avg_rating %}
+         {{ avg_rating|stars|safe }}
+      {% else %}
+         <span class="text-muted">No ratings yet.</span>
+      {% endif %}
+    </h4>
+  </div>
+
+  <!-- Reviews from all users -->
+  <h3 class="mt-4">User Reviews</h3>
+  {% if reviews %}
+    {% for review in reviews %}
+      <div class="card mb-3 {% if review.user.id == current_user.id %}border-primary{% else %}border-secondary{% endif %}">
+        <div class="card-header">
+          {{ review.user.username }}
+          {% if review.user.id == current_user.id %}(Your Review){% endif %}
+          {% if review.rating is defined %}
+            - Rating: {{ review.rating }}
+          {% endif %}
+        </div>
+        <div class="card-body">
+          {% if review.note is defined and review.note|trim %}
+            <p class="card-text">{{ review.note | markdown | safe }}</p>
+          {% else %}
+            <p class="card-text text-muted">No note provided.</p>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-muted">No reviews available yet.</p>
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var easyMDE = new EasyMDE({
+        element: document.getElementById("noteEditor"),
+        // Set autoDownloadFontAwesome to true so the icons display correctly.
+        autoDownloadFontAwesome: true
+    });
+});
+</script>
 {% endblock %}

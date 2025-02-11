@@ -2,6 +2,10 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app.models import Show, Season, Episode, Movie, Rating, Note
 from app import db
+from sqlalchemy.orm import joinedload
+from flask import jsonify
+from app.models import Show, Season, Episode, Movie, Rating, Note, User
+
 
 main_bp = Blueprint('main', __name__, template_folder='templates')
 
@@ -15,7 +19,10 @@ def index():
 @login_required
 def dashboard():
     filter_option = request.args.get('filter', 'all')
-    shows  = Show.query.order_by(Show.order).all()
+    # Eager load seasons and episodes in one query to avoid N+1 queries
+    shows = Show.query.options(
+        joinedload(Show.seasons).joinedload(Season.episodes)
+    ).order_by(Show.order).all()
     movies = Movie.query.order_by(Movie.order).all()
 
     if filter_option == 'unwatched':
@@ -58,7 +65,7 @@ def content_detail(content_type, content_id):
         return redirect(url_for('main.dashboard'))
 
     if request.method == 'POST':
-        # Process note
+        # Process note for current user
         note_text = request.form.get('note')
         existing_note = None
         for note in content.notes:
@@ -79,7 +86,7 @@ def content_detail(content_type, content_id):
                 new_note.show_id = content.id
             db.session.add(new_note)
 
-        # Process rating
+        # Process rating for current user
         rating_value = request.form.get('rating')
         if rating_value:
             try:
@@ -89,9 +96,6 @@ def content_detail(content_type, content_id):
             except ValueError as e:
                 flash(str(e), 'danger')
                 return redirect(url_for('main.content_detail', content_type=content_type, content_id=content_id))
-
-            # Check if the user already has a rating for this content
-            from app.models import Rating  # ensure Rating is imported
             existing_rating = None
             for r in content.ratings:
                 if r.user_id == current_user.id:
@@ -110,30 +114,56 @@ def content_detail(content_type, content_id):
                 elif content_type == 'show':
                     new_rating.show_id = content.id
                 db.session.add(new_rating)
-
         db.session.commit()
         flash('Your note and rating have been saved.', 'success')
         return redirect(url_for('main.content_detail', content_type=content_type, content_id=content_id))
-    return render_template('content_detail.html', content=content, content_type=content_type)
+
+    # ---- Build aggregated reviews (notes + ratings) ----
+    # Create a dictionary keyed by user_id
+    reviews_dict = {}
+    for rating in content.ratings:
+        reviews_dict.setdefault(rating.user_id, {})['rating'] = rating.value
+    for note in content.notes:
+        reviews_dict.setdefault(note.user_id, {})['note'] = note.content
+    all_reviews = []
+    for user_id, review in reviews_dict.items():
+        # Pull the user object via relationship (note that Note and Rating have backrefs to user)
+        user = User.query.get(user_id)
+        review['user'] = user
+        all_reviews.append(review)
+    # Compute aggregated average rating (if any)
+    if content.ratings:
+        avg_rating = sum(r.value for r in content.ratings) / len(content.ratings)
+    else:
+        avg_rating = None
+    # Pass aggregated reviews and average rating to the template
+    return render_template('content_detail.html',
+                           content=content,
+                           content_type=content_type,
+                           reviews=all_reviews,
+                           avg_rating=avg_rating)
+
 
 
 @main_bp.route('/toggle_watched/<string:content_type>/<int:content_id>', methods=['POST'])
 @login_required
 def toggle_watched(content_type, content_id):
+    # Read the "watched" parameter and convert to boolean
+    new_status = request.form.get('watched', 'false').lower() == 'true'
     if content_type == 'movie':
         item = Movie.query.get_or_404(content_id)
-        item.watched = not item.watched
+        item.watched = new_status
     elif content_type == 'episode':
         item = Episode.query.get_or_404(content_id)
-        item.watched = not item.watched
+        item.watched = new_status
     elif content_type == 'season':
         item = Season.query.get_or_404(content_id)
-        new_status = not item.watched
         for episode in item.episodes:
             episode.watched = new_status
     elif content_type == 'show':
-        item = Show.query.get_or_404(content_id)
-        new_status = not item.watched
+        item = Show.query.options(
+            joinedload(Show.seasons).joinedload(Season.episodes)
+        ).get_or_404(content_id)
         for season in item.seasons:
             for episode in season.episodes:
                 episode.watched = new_status
@@ -143,3 +173,6 @@ def toggle_watched(content_type, content_id):
     db.session.commit()
     flash(f"{content_type.capitalize()} watched status updated.", "success")
     return redirect(url_for('main.dashboard'))
+
+
+
