@@ -1,0 +1,31 @@
+/* Add some top padding to the body so content isn’t flush against the browser edge */
+body {
+    padding-top: 0px;
+  }
+  
+  /* Increase left margin on the navbar-brand so the title isn’t too close to the browser edge */
+  .navbar .navbar-brand {
+    margin-left: 20px;
+  }
+  
+  /* Add some horizontal spacing for container elements */
+  .container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  
+  /* Adjust spacing for list group items to give a bit more room */
+  .list-group-item {
+    padding: 15px;
+  }
+  
+  /* Ensure images have a margin to the right so text isn’t touching them */
+  .img-thumbnail {
+    margin-right: 15px;
+  }
+  
+  /* Optionally, center images vertically (if needed) */
+  .img-thumbnail {
+    vertical-align: middle;
+  }
+  

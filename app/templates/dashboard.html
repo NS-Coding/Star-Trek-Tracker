@@ -2,6 +2,11 @@
 {% block content %}
 <h2>Dashboard</h2>
 
+<!-- Button to export notes -->
+<div class="mb-3">
+  <a href="{{ url_for('main.export_notes') }}" class="btn btn-info">Export My Notes</a>
+</div>
+
 <!-- Legend for Note Indicator -->
 <div class="mb-2">
   <span>
@@ -38,7 +43,7 @@
              <a href="{{ url_for('main.content_detail', content_type='movie', content_id=item.id) }}">
                {{ item.title }}
              </a>
-             <!-- Display ratings -->
+             <!-- Descriptive ratings for movies -->
              <div>
                {% set user_rating_list = item.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
                {% if user_rating_list|length > 0 %}
@@ -46,7 +51,14 @@
                {% else %}
                  {% set user_rating = None %}
                {% endif %}
-               <small>Your Rating: {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}</small>
+               <small>
+                 Your Direct Rating 
+                 <!-- Uncomment the line below for Bootstrap 4 -->
+                 <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The rating you provided directly for this movie." style="cursor: help;"></i>-->
+                 <!-- Use this line for Bootstrap 5: -->
+                 <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The rating you provided directly for this movie." style="cursor: help;"></i>
+                 : {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}
+               </small>
              </div>
              <div>
                {% if item.ratings|length > 0 %}
@@ -54,10 +66,25 @@
                {% else %}
                  {% set avg_rating = None %}
                {% endif %}
-               <small>Average Rating: {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}</small>
+               <small>
+                 Community Average Rating 
+                 <!-- Bootstrap 4 -->
+                 <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The average of all direct ratings provided by users for this movie." style="cursor: help;"></i>-->
+                 <!-- Bootstrap 5 -->
+                 <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The average of all direct ratings provided by users for this movie." style="cursor: help;"></i>
+                 : {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}
+               </small>
              </div>
              <div>
-               <small>IMDb Rating: {% if item.imdb_rating %}{{ item.imdb_rating|stars|safe }} ({{ "%.2f"|format(item.imdb_rating) }}){% else %}<span class="text-muted">No Rating</span>{% endif %}</small>
+               <small>
+                 IMDb Rating 
+                 <!-- Bootstrap 4 -->
+                 <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The rating provided by IMDb." style="cursor: help;"></i>-->
+                 <!-- Bootstrap 5 -->
+                 <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The rating provided by IMDb." style="cursor: help;"></i>
+                 : {% if item.imdb_rating %}{{ item.imdb_rating|stars|safe }} ({{ "%.2f"|format(item.imdb_rating) }})
+                 {% else %}<span class="text-muted">No Rating</span>{% endif %}
+               </small>
              </div>
            </div>
          </div>
@@ -83,7 +110,7 @@
                <a href="{{ url_for('main.content_detail', content_type='show', content_id=item.id) }}">
                  {{ item.title }}
                </a>
-               <!-- Display ratings -->
+               <!-- Descriptive ratings for shows -->
                <div>
                  {% set user_rating_list = item.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
                  {% if user_rating_list|length > 0 %}
@@ -91,7 +118,14 @@
                  {% else %}
                    {% set user_rating = None %}
                  {% endif %}
-                 <small>Your Rating: {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}</small>
+                 <small>
+                   Your Direct Rating 
+                   <!-- Bootstrap 4 -->
+                   <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The rating you provided directly for this show." style="cursor: help;"></i>-->
+                   <!-- Bootstrap 5 -->
+                   <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The rating you provided directly for this show." style="cursor: help;"></i>
+                   : {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}
+                 </small>
                </div>
                <div>
                  {% if item.ratings|length > 0 %}
@@ -99,14 +133,51 @@
                  {% else %}
                    {% set avg_rating = None %}
                  {% endif %}
-                 <small>Average Rating: {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}</small>
+                 <small>
+                   Community Average Rating 
+                   <!-- Bootstrap 4 -->
+                   <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The average of all direct ratings provided by users for this show." style="cursor: help;"></i>-->
+                   <!-- Bootstrap 5 -->
+                   <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The average of all direct ratings provided by users for this show." style="cursor: help;"></i>
+                   : {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}
+                 </small>
                </div>
                <div>
-                 <small>IMDb Rating: {% if item.imdb_rating %}{{ item.imdb_rating|stars|safe }} ({{ "%.2f"|format(item.imdb_rating) }}){% else %}<span class="text-muted">No Rating</span>{% endif %}</small>
+                 <small>
+                   IMDb Rating 
+                   <!-- Bootstrap 4 -->
+                   <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The rating provided by IMDb." style="cursor: help;"></i>-->
+                   <!-- Bootstrap 5 -->
+                   <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The rating provided by IMDb." style="cursor: help;"></i>
+                   : {% if item.imdb_rating %}{{ item.imdb_rating|stars|safe }} ({{ "%.2f"|format(item.imdb_rating) }})
+                   {% else %}<span class="text-muted">No Rating</span>{% endif %}
+                 </small>
+               </div>
+               <div>
+                 {% set calc_user_rating = item.get_calculated_user_rating(current_user.id) %}
+                 <small>
+                   Your Aggregated Rating 
+                   <!-- Bootstrap 4 -->
+                   <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="Calculated by averaging your ratings on each episode across all seasons of this show." style="cursor: help;"></i>-->
+                   <!-- Bootstrap 5 -->
+                   <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="Calculated by averaging your ratings on each episode across all seasons of this show." style="cursor: help;"></i>
+                   : {{ calc_user_rating|stars|safe }} {% if calc_user_rating is not none %}({{ "%.2f"|format(calc_user_rating) }}){% endif %}
+                 </small>
+               </div>
+               <div>
+                 {% set calc_avg_rating = item.calculated_avg_user_rating %}
+                 <small>
+                   Community Aggregated Rating 
+                   <!-- Bootstrap 4 -->
+                   <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="Calculated by averaging all users’ episode ratings across all seasons of this show." style="cursor: help;"></i>-->
+                   <!-- Bootstrap 5 -->
+                   <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="Calculated by averaging all users’ episode ratings across all seasons of this show." style="cursor: help;"></i>
+                   : {{ calc_avg_rating|stars|safe }} {% if calc_avg_rating is not none %}({{ "%.2f"|format(calc_avg_rating) }}){% endif %}
+                 </small>
                </div>
              </div>
              <!-- Drop-down arrow for seasons -->
-             <button class="btn btn-link p-0 ml-2" type="button" data-toggle="collapse" data-target="#showCollapse{{ item.id }}" aria-expanded="false" aria-controls="showCollapse{{ item.id }}">
+             <button class="btn btn-link p-0 ml-2" type="button" data-bs-toggle="collapse" data-bs-target="#showCollapse{{ item.id }}" aria-expanded="false" aria-controls="showCollapse{{ item.id }}">
                &#9660;
              </button>
            </div>
@@ -128,14 +199,14 @@
               {% set episodes = season.episodes|sort(attribute='episode_number') %}
             {% endif %}
             {% if episodes and episodes|length > 0 %}
-              <!-- Season block (no artwork shown) -->
+              <!-- Season block -->
               <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
                 <div class="d-flex align-items-center flex-wrap">
                   <div>
                      <a href="{{ url_for('main.content_detail', content_type='season', content_id=season.id) }}">
                        Season {{ season.number }}
                      </a>
-                     <!-- Display season ratings -->
+                     <!-- Descriptive ratings for seasons -->
                      <div>
                        {% set user_rating_list = season.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
                        {% if user_rating_list|length > 0 %}
@@ -143,7 +214,14 @@
                        {% else %}
                          {% set user_rating = None %}
                        {% endif %}
-                       <small>Your Rating: {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}</small>
+                       <small>
+                         Your Direct Rating 
+                         <!-- Bootstrap 4 -->
+                         <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The rating you provided directly for this season." style="cursor: help;"></i>-->
+                         <!-- Bootstrap 5 -->
+                         <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The rating you provided directly for this season." style="cursor: help;"></i>
+                         : {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}
+                       </small>
                      </div>
                      <div>
                        {% if season.ratings|length > 0 %}
@@ -151,14 +229,51 @@
                        {% else %}
                          {% set avg_rating = None %}
                        {% endif %}
-                       <small>Average Rating: {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}</small>
+                       <small>
+                         Community Average Rating 
+                         <!-- Bootstrap 4 -->
+                         <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The average of all direct ratings provided by users for this season." style="cursor: help;"></i>-->
+                         <!-- Bootstrap 5 -->
+                         <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The average of all direct ratings provided by users for this season." style="cursor: help;"></i>
+                         : {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}
+                       </small>
                      </div>
                      <div>
-                       <small>IMDb Rating: {% if season.imdb_rating %}{{ season.imdb_rating|stars|safe }} ({{ "%.2f"|format(season.imdb_rating) }}){% else %}<span class="text-muted">No Rating</span>{% endif %}</small>
+                       <small>
+                         IMDb Rating 
+                         <!-- Bootstrap 4 -->
+                         <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The rating provided by IMDb (if available) for this season." style="cursor: help;"></i>-->
+                         <!-- Bootstrap 5 -->
+                         <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The rating provided by IMDb (if available) for this season." style="cursor: help;"></i>
+                         : {% if season.imdb_rating %}{{ season.imdb_rating|stars|safe }} ({{ "%.2f"|format(season.imdb_rating) }})
+                         {% else %}<span class="text-muted">No Rating</span>{% endif %}
+                       </small>
+                     </div>
+                     <div>
+                       {% set calc_user_rating = season.get_calculated_user_rating(current_user.id) %}
+                       <small>
+                         Your Aggregated Rating 
+                         <!-- Bootstrap 4 -->
+                         <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="Calculated by averaging your ratings on each episode in this season." style="cursor: help;"></i>-->
+                         <!-- Bootstrap 5 -->
+                         <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="Calculated by averaging your ratings on each episode in this season." style="cursor: help;"></i>
+                         : {{ calc_user_rating|stars|safe }} {% if calc_user_rating is not none %}({{ "%.2f"|format(calc_user_rating) }}){% endif %}
+                       </small>
+                     </div>
+                     <div>
+                       {% set calc_avg_rating = season.calculated_avg_user_rating %}
+                       <small>
+                         Community Aggregated Rating 
+                         <!-- Bootstrap 4 -->
+                         <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="Calculated by averaging all users’ ratings on each episode in this season." style="cursor: help;"></i>-->
+                         <!-- Bootstrap 5 -->
+                         <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="Calculated by averaging all users’ ratings on each episode in this season." style="cursor: help;"></i>
+                         : {{ calc_avg_rating|stars|safe }} {% if calc_avg_rating is not none %}({{ "%.2f"|format(calc_avg_rating) }}){% endif %}
+                       </small>
                      </div>
                   </div>
                   <!-- Season drop-down arrow -->
-                  <button class="btn btn-link p-0 ml-2" type="button" data-toggle="collapse" data-target="#seasonCollapse{{ season.id }}" aria-expanded="false" aria-controls="seasonCollapse{{ season.id }}">
+                  <button class="btn btn-link p-0 ml-2" type="button" data-bs-toggle="collapse" data-bs-target="#seasonCollapse{{ season.id }}" aria-expanded="false" aria-controls="seasonCollapse{{ season.id }}">
                     &#9660;
                   </button>
                 </div>
@@ -171,7 +286,7 @@
                   </form>
                 </div>
               </div>
-              <!-- Collapsible area for episodes within this season (no artwork shown) -->
+              <!-- Collapsible area for episodes within this season -->
               <div class="collapse ml-3" id="seasonCollapse{{ season.id }}">
                    <ul class="list-group">
                      {% for episode in episodes %}
@@ -181,7 +296,7 @@
                               <a href="{{ url_for('main.content_detail', content_type='episode', content_id=episode.id) }}">
                                 Episode {{ episode.episode_number }}: {{ episode.title }}
                               </a>
-                              <!-- Episode ratings -->
+                              <!-- Descriptive ratings for episodes -->
                               <div>
                                 {% set user_rating_list = episode.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
                                 {% if user_rating_list|length > 0 %}
@@ -189,7 +304,14 @@
                                 {% else %}
                                   {% set user_rating = None %}
                                 {% endif %}
-                                <small>Your Rating: {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}</small>
+                                <small>
+                                  Your Rating 
+                                  <!-- Bootstrap 4 -->
+                                  <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The rating you provided for this episode." style="cursor: help;"></i>-->
+                                  <!-- Bootstrap 5 -->
+                                  <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The rating you provided for this episode." style="cursor: help;"></i>
+                                  : {{ user_rating|stars|safe }} {% if user_rating is not none %}({{ "%.2f"|format(user_rating) }}){% endif %}
+                                </small>
                               </div>
                               <div>
                                 {% if episode.ratings|length > 0 %}
@@ -197,10 +319,25 @@
                                 {% else %}
                                   {% set avg_rating = None %}
                                 {% endif %}
-                                <small>Average Rating: {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}</small>
+                                <small>
+                                  Average Rating 
+                                  <!-- Bootstrap 4 -->
+                                  <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The average of all ratings provided by users for this episode." style="cursor: help;"></i>-->
+                                  <!-- Bootstrap 5 -->
+                                  <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The average of all ratings provided by users for this episode." style="cursor: help;"></i>
+                                  : {{ avg_rating|stars|safe }} {% if avg_rating is not none %}({{ "%.2f"|format(avg_rating) }}){% endif %}
+                                </small>
                               </div>
                               <div>
-                                <small>IMDb Rating: {% if episode.imdb_rating %}{{ episode.imdb_rating|stars|safe }} ({{ "%.2f"|format(episode.imdb_rating) }}){% else %}<span class="text-muted">No Rating</span>{% endif %}</small>
+                                <small>
+                                  IMDb Rating 
+                                  <!-- Bootstrap 4 -->
+                                  <!--<i class="fas fa-info-circle" data-toggle="tooltip" title="The rating provided by IMDb for this episode." style="cursor: help;"></i>-->
+                                  <!-- Bootstrap 5 -->
+                                  <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="The rating provided by IMDb for this episode." style="cursor: help;"></i>
+                                  : {% if episode.imdb_rating %}{{ episode.imdb_rating|stars|safe }} ({{ "%.2f"|format(episode.imdb_rating) }})
+                                  {% else %}<span class="text-muted">No Rating</span>{% endif %}
+                                </small>
                               </div>
                             </div>
                           </div>

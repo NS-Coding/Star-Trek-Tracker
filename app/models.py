@@ -29,7 +29,6 @@ class Show(db.Model):
     artwork_url = db.Column(db.String(256))
     imdb_rating = db.Column(db.Float)
     seasons     = db.relationship('Season', backref='show', lazy=True)
-    # NEW: Allow notes on shows
     notes       = db.relationship('Note', backref='show', lazy=True)
     ratings     = db.relationship('Rating', backref='show', lazy=True)
 
@@ -38,6 +37,34 @@ class Show(db.Model):
         if not self.seasons:
             return False
         return all(season.watched for season in self.seasons)
+
+    def get_calculated_user_rating(self, user_id):
+        """
+        Returns the average of the current user’s ratings on all episodes within all seasons.
+        (A season’s calculated rating is computed from its episodes.)
+        """
+        ratings = []
+        for season in self.seasons:
+            season_rating = season.get_calculated_user_rating(user_id)
+            if season_rating is not None:
+                ratings.append(season_rating)
+        if ratings:
+            return sum(ratings) / len(ratings)
+        return None
+
+    @property
+    def calculated_avg_user_rating(self):
+        """
+        Returns the overall average of all users’ episode ratings from all seasons.
+        """
+        ratings = []
+        for season in self.seasons:
+            season_rating = season.calculated_avg_user_rating
+            if season_rating is not None:
+                ratings.append(season_rating)
+        if ratings:
+            return sum(ratings) / len(ratings)
+        return None
 
     def __repr__(self):
         return f'<Show {self.title}>'
@@ -49,7 +76,6 @@ class Season(db.Model):
     show_id     = db.Column(db.Integer, db.ForeignKey('shows.id'), nullable=False)
     imdb_rating = db.Column(db.Float)
     episodes    = db.relationship('Episode', backref='season', lazy=True)
-    # NEW: Allow notes for a season
     notes       = db.relationship('Note', backref='season', lazy=True)
     ratings     = db.relationship('Rating', backref='season', lazy=True)
 
@@ -64,6 +90,32 @@ class Season(db.Model):
         """If no specific season image, fall back to the parent show artwork."""
         if self.show and self.show.artwork_url:
             return self.show.artwork_url
+        return None
+
+    def get_calculated_user_rating(self, user_id):
+        """
+        Returns the average of the current user’s ratings on all episodes in this season.
+        """
+        ratings = []
+        for episode in self.episodes:
+            for rating in episode.ratings:
+                if rating.user_id == user_id:
+                    ratings.append(rating.value)
+        if ratings:
+            return sum(ratings) / len(ratings)
+        return None
+
+    @property
+    def calculated_avg_user_rating(self):
+        """
+        Returns the average of all users’ ratings on all episodes in this season.
+        """
+        ratings = []
+        for episode in self.episodes:
+            for rating in episode.ratings:
+                ratings.append(rating.value)
+        if ratings:
+            return sum(ratings) / len(ratings)
         return None
 
     def __repr__(self):
@@ -101,8 +153,8 @@ class Movie(db.Model):
     description  = db.Column(db.Text)
     order        = db.Column(db.Integer)
     artwork_url  = db.Column(db.String(256))
-    imdb_rating  = db.Column(db.Float)  # IMDb rating for the movie
-    watched      = db.Column(db.Boolean, default=False)  # New column for watched status
+    imdb_rating  = db.Column(db.Float)
+    watched      = db.Column(db.Boolean, default=False)
     ratings      = db.relationship('Rating', backref='movie', lazy=True)
     notes        = db.relationship('Note', backref='movie', lazy=True)
 
@@ -112,7 +164,7 @@ class Movie(db.Model):
 class Rating(db.Model):
     __tablename__ = 'ratings'
     id         = db.Column(db.Integer, primary_key=True)
-    value      = db.Column(db.Float, nullable=False)  # e.g. 0-10, decimals allowed
+    value      = db.Column(db.Float, nullable=False)
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     episode_id = db.Column(db.Integer, db.ForeignKey('episodes.id'), nullable=True)
     movie_id   = db.Column(db.Integer, db.ForeignKey('movies.id'), nullable=True)
@@ -130,7 +182,6 @@ class Note(db.Model):
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     episode_id = db.Column(db.Integer, db.ForeignKey('episodes.id'), nullable=True)
     movie_id   = db.Column(db.Integer, db.ForeignKey('movies.id'), nullable=True)
-    # NEW: Add foreign keys for season and show notes
     season_id  = db.Column(db.Integer, db.ForeignKey('seasons.id'), nullable=True)
     show_id    = db.Column(db.Integer, db.ForeignKey('shows.id'), nullable=True)
     timestamp  = db.Column(db.DateTime, default=datetime.utcnow)

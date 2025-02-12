@@ -5,6 +5,8 @@ from app import db
 from sqlalchemy.orm import joinedload
 from flask import jsonify
 from app.models import Show, Season, Episode, Movie, Rating, Note, User
+from flask import Response
+
 
 
 main_bp = Blueprint('main', __name__, template_folder='templates')
@@ -175,4 +177,95 @@ def toggle_watched(content_type, content_id):
     return redirect(url_for('main.dashboard'))
 
 
+@main_bp.route('/export_notes')
+@login_required
+def export_notes():
+    """
+    Compile all notes for the current user into a single markdown file.
+    The top-level header is "# Star Trek Notes: <USERNAME>".
+    Movies and Shows are ordered by their 'order' value.
+    For movies, a level-2 header ("##") is used.
+    For shows, a level-2 header is used for the show,
+    level-3 ("###") for seasons (ordered by season.number),
+    and level-4 ("####") for episodes (ordered by episode_number).
+    Content with no note is skipped.
+    """
+    user = current_user
+    markdown_lines = []
+    markdown_lines.append(f"# Star Trek Notes: {user.username}")
+    markdown_lines.append("")
 
+    # Get all movies and shows ordered by their 'order' value.
+    movies = Movie.query.order_by(Movie.order).all()
+    shows = Show.query.order_by(Show.order).all()
+    combined = movies + shows
+    combined.sort(key=lambda x: x.order if x.order is not None else 9999)
+
+    for item in combined:
+        if item.__class__.__name__ == 'Movie':
+            user_note = None
+            for note in item.notes:
+                if note.user_id == user.id and note.content.strip():
+                    user_note = note.content.strip()
+                    break
+            if user_note:
+                markdown_lines.append(f"## {item.title}")
+                markdown_lines.append("")
+                markdown_lines.append(user_note)
+                markdown_lines.append("")
+        elif item.__class__.__name__ == 'Show':
+            show_note = None
+            for note in item.notes:
+                if note.user_id == user.id and note.content.strip():
+                    show_note = note.content.strip()
+                    break
+            # Check if any child note exists (in seasons or episodes)
+            has_child_note = False
+            seasons = sorted(item.seasons, key=lambda s: s.number)
+            for season in seasons:
+                season_has_note = any(n.user_id == user.id and n.content.strip() for n in season.notes)
+                episodes = sorted(season.episodes, key=lambda ep: ep.episode_number)
+                episode_has_note = any(
+                    any(n.user_id == user.id and n.content.strip() for n in ep.notes)
+                    for ep in episodes
+                )
+                if season_has_note or episode_has_note:
+                    has_child_note = True
+                    break
+            if show_note or has_child_note:
+                markdown_lines.append(f"## {item.title}")
+                markdown_lines.append("")
+                if show_note:
+                    markdown_lines.append(show_note)
+                    markdown_lines.append("")
+                seasons = sorted(item.seasons, key=lambda s: s.number)
+                for season in seasons:
+                    season_note = None
+                    for note in season.notes:
+                        if note.user_id == user.id and note.content.strip():
+                            season_note = note.content.strip()
+                            break
+                    episodes = sorted(season.episodes, key=lambda ep: ep.episode_number)
+                    episode_lines = []
+                    for ep in episodes:
+                        ep_note = None
+                        for note in ep.notes:
+                            if note.user_id == user.id and note.content.strip():
+                                ep_note = note.content.strip()
+                                break
+                        if ep_note:
+                            episode_lines.append(f"#### Episode {ep.episode_number}: {ep.title}")
+                            episode_lines.append("")
+                            episode_lines.append(ep_note)
+                            episode_lines.append("")
+                    if season_note or episode_lines:
+                        markdown_lines.append(f"### Season {season.number}")
+                        markdown_lines.append("")
+                        if season_note:
+                            markdown_lines.append(season_note)
+                            markdown_lines.append("")
+                        markdown_lines.extend(episode_lines)
+    content = "\n".join(markdown_lines)
+    response = Response(content, mimetype='text/markdown')
+    response.headers["Content-Disposition"] = f"attachment; filename=star_trek_notes_{user.username}.md"
+    return response
