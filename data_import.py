@@ -1,4 +1,7 @@
 import re
+import os
+import urllib.request
+from urllib.parse import urlparse
 from datetime import datetime
 from imdb import Cinemagoer
 from app import create_app, db
@@ -6,6 +9,31 @@ from app.models import Show, Season, Episode, Movie
 
 app = create_app()
 app.app_context().push()
+
+def download_image(url, prefix):
+    """
+    Download an image from the given URL and save it to app/static/images with a filename based on prefix.
+    Returns the relative path to the saved image (e.g., "images/filename.jpg") or the original URL if download fails.
+    """
+    if not url:
+        return None
+    try:
+        parsed_url = urlparse(url)
+        _, ext = os.path.splitext(parsed_url.path)
+        if not ext:
+            ext = ".jpg"
+        filename = f"{prefix}{ext}"
+        images_folder = os.path.join(app.root_path, 'static', 'images')
+        if not os.path.exists(images_folder):
+            os.makedirs(images_folder)
+        file_path = os.path.join(images_folder, filename)
+        # Download the image from the URL and save it locally.
+        urllib.request.urlretrieve(url, file_path)
+        # Return the relative path for static file serving.
+        return f"images/{filename}"
+    except Exception as e:
+        print(f"Error downloading image from {url}: {e}")
+        return url  # Fallback to the original URL if download fails.
 
 def parse_air_date(air_date_str):
     """
@@ -30,6 +58,8 @@ def fetch_show_and_episodes(imdb_id, order):
     title = series.get('title')
     description = series.get('plot outline') or (series.get('plot')[0] if series.get('plot') else '')
     artwork_url = series.get('cover url')  # Poster image URL
+    if artwork_url:
+        artwork_url = download_image(artwork_url, f"series_{imdb_id}")
     series_rating = series.get('rating')    # Overall series rating (e.g., 8.5)
     print(f"Fetched series: {title} (Rating: {series_rating})")
 
@@ -82,7 +112,13 @@ def fetch_show_and_episodes(imdb_id, order):
             air_date_str = ep.get('original air date')
             air_date = parse_air_date(air_date_str)
             ep_artwork = ep.get('cover url')
+            if ep_artwork:
+                ep_artwork = download_image(ep_artwork, f"series_{imdb_id}_season_{season_num_int}_ep_{ep_number}")
             ep_rating = ep.get('rating')  # Retrieve episode rating, if available.
+            if ep_rating is None:
+                # Attempt to update episode details to get missing rating.
+                ia.update(ep, 'main')
+                ep_rating = ep.get('rating')
             if ep_rating is not None:
                 try:
                     ep_rating = float(ep_rating)
@@ -116,6 +152,8 @@ def fetch_movie(imdb_id, order):
     description = movie.get('plot outline') or (movie.get('plot')[0] if movie.get('plot') else '')
     release_year = movie.get('year')
     artwork_url = movie.get('cover url')
+    if artwork_url:
+        artwork_url = download_image(artwork_url, f"movie_{imdb_id}")
     movie_rating = movie.get('rating')
     release_date = datetime(release_year, 1, 1) if release_year else None
     print(f"Fetched movie: {title} (Rating: {movie_rating})")
@@ -148,7 +186,6 @@ def import_star_trek_data():
         "Star Trek: Prodigy": {"imdb_id": "9795876", "order": 24},
         "Star Trek: Strange New Worlds": {"imdb_id": "12327578", "order": 25},
         # Additional series can be added here.
-        # For example: "Star Trek: Deep Space Nine": {"imdb_id": "tt0106145", "order": 6},
     }
     
     for series_name, info in tv_series.items():
