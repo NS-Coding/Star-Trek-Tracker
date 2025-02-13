@@ -11,7 +11,7 @@ After building and starting your Docker containers for the first time, follow th
    From your project’s root directory, run:
 
    ```bash
-   docker-compose up -d
+   docker-compose up --build -d
    ```
 
    This command starts all containers (the web app, PostgreSQL database, and Adminer).

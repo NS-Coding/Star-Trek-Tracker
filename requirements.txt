@@ -3,7 +3,7 @@ Flask-Login
 Flask-SQLAlchemy
 psycopg2-binary
 Flask-WTF
-git+https://github.com/hdantas/cinemagoer.git#egg=cinemagoer
+git+https://github.com/cinemagoer/cinemagoer.git@01146c2a65cf55fbc996ab692d290e73779bad4c#egg=cinemagoer
 gunicorn
 email-validator
 Flask-Migrate

@@ -14,6 +14,7 @@ def download_image(url, prefix):
     """
     Download an image from the given URL and save it to app/static/images with a filename based on prefix.
     Returns the relative path to the saved image (e.g., "images/filename.jpg") or the original URL if download fails.
+    Checks first if the file exists locally to avoid redundant downloads.
     """
     if not url:
         return None
@@ -27,6 +28,9 @@ def download_image(url, prefix):
         if not os.path.exists(images_folder):
             os.makedirs(images_folder)
         file_path = os.path.join(images_folder, filename)
+        # If file already exists, skip download.
+        if os.path.exists(file_path):
+            return f"images/{filename}"
         # Download the image from the URL and save it locally.
         urllib.request.urlretrieve(url, file_path)
         # Return the relative path for static file serving.
@@ -117,7 +121,7 @@ def fetch_show_and_episodes(imdb_id, order):
             ep_rating = ep.get('rating')  # Retrieve episode rating, if available.
             if ep_rating is None:
                 # Attempt to update episode details to get missing rating.
-                ia.update(ep, 'main')
+                ia.update(ep, info=['main', 'vote details'])
                 ep_rating = ep.get('rating')
             if ep_rating is not None:
                 try:
@@ -170,8 +174,13 @@ def fetch_movie(imdb_id, order):
     db.session.commit()
 
 def import_star_trek_data():
+    """
+    Import Star Trek TV series and movies into the database.
+    Run this script using:
+        python data_import.py
+    Ensure that your database has been set up and migrations applied before running this script.
+    """
     # Configuration dictionaries for TV series and movies.
-    # To add new content, add an entry with the title’s IMDb ID and desired checklist order.
     tv_series = {
         "Star Trek: The Original Series": {"imdb_id": "0060028", "order": 1},
         "Star Trek: The Animated Series": {"imdb_id": "0069637", "order": 2},
