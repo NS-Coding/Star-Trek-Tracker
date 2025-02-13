@@ -25,7 +25,7 @@ class Show(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     title       = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text)
-    order       = db.Column(db.Integer)
+    order       = db.Column(db.Integer, index=True)
     artwork_url = db.Column(db.String(256))
     imdb_rating = db.Column(db.Float)
     seasons     = db.relationship('Season', backref='show', lazy=True)
@@ -72,7 +72,7 @@ class Show(db.Model):
 class Season(db.Model):
     __tablename__ = 'seasons'
     id          = db.Column(db.Integer, primary_key=True)
-    number      = db.Column(db.Integer, nullable=False)
+    number      = db.Column(db.Integer, nullable=False, index=True)
     show_id     = db.Column(db.Integer, db.ForeignKey('shows.id'), nullable=False)
     imdb_rating = db.Column(db.Float)
     episodes    = db.relationship('Episode', backref='season', lazy=True)
@@ -125,7 +125,7 @@ class Episode(db.Model):
     __tablename__ = 'episodes'
     id             = db.Column(db.Integer, primary_key=True)
     title          = db.Column(db.String(256), nullable=False)
-    episode_number = db.Column(db.Integer)
+    episode_number = db.Column(db.Integer, index=True)
     season_id      = db.Column(db.Integer, db.ForeignKey('seasons.id'), nullable=False)
     air_date       = db.Column(db.Date)
     artwork_url    = db.Column(db.String(256))
@@ -151,7 +151,7 @@ class Movie(db.Model):
     title        = db.Column(db.String(128), nullable=False)
     release_date = db.Column(db.Date)
     description  = db.Column(db.Text)
-    order        = db.Column(db.Integer)
+    order        = db.Column(db.Integer, index=True)
     artwork_url  = db.Column(db.String(256))
     imdb_rating  = db.Column(db.Float)
     watched      = db.Column(db.Boolean, default=False)
