@@ -8,10 +8,11 @@
     {% set image_url = content.artwork_url %}
   {% endif %}
   {% if image_url %}
-    <img src="{{ image_url }}" alt="{{ content.title }} artwork" class="img-fluid mb-3">
+    <img src="{{ url_for('static', filename=image_url) }}" alt="{{ content.title }} artwork" class="img-fluid mb-3">
   {% else %}
-    <img src="/static/images/placeholder.jpg" alt="Placeholder image" class="img-fluid mb-3">
+    <img src="{{ url_for('static', filename='images/placeholder.jpg') }}" alt="Placeholder image" class="img-fluid mb-3">
   {% endif %}
+
 
   <h2>
     {% if content_type == 'episode' %}

@@ -67,7 +67,7 @@ def fetch_show_and_episodes(imdb_id, order, max_seasons=25):
     description = series.plot if hasattr(series, 'plot') and series.plot else ""
     if isinstance(description, dict):
         description = description.get('en-US', next(iter(description.values()), ""))
-    artwork_url = series.cover_url if hasattr(series, 'cover_url') else None
+    artwork_url = series.primary_image if hasattr(series, 'primary_image') else None
     if artwork_url:
         artwork_url = download_image(artwork_url, f"series_{imdb_id}")
     series_rating = series.rating if hasattr(series, 'rating') else None
@@ -183,7 +183,7 @@ def fetch_movie(imdb_id, order):
     if isinstance(description, dict):
         description = description.get('en-US', next(iter(description.values()), ""))
     release_year = movie.year if hasattr(movie, 'year') else None
-    artwork_url = movie.cover_url if hasattr(movie, 'cover_url') else None
+    artwork_url = movie.primary_image if hasattr(movie, 'primary_image') else None
     if artwork_url:
         artwork_url = download_image(artwork_url, f"movie_{imdb_id}")
     movie_rating = movie.rating if hasattr(movie, 'rating') else None
