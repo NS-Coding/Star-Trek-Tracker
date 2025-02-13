@@ -79,6 +79,7 @@ dmypy.json
 # Database 
 database/
 migrations/
+backups/
 
 #Images
 images
