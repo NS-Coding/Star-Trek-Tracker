@@ -31,10 +31,14 @@
              {% endif %}
              {# --- New Note Indicator Here --- #}
              {% set user_notes = item.notes | selectattr("user_id", "equalto", current_user.id) | list %}
-             {% set has_note = user_notes|length > 0 %}
-             <span style="color: {% if has_note %}green{% else %}gray{% endif %}; margin-left: 5px;" title="Note exists if green">
+             {% if user_notes|length > 0 %}
+               {% set note_text = user_notes[0].content|trim %}
+             {% else %}
+               {% set note_text = "" %}
+             {% endif %}
+             <span style="color: {% if note_text %}green{% else %}gray{% endif %}; margin-left: 5px;" title="Note exists if green">
                <i class="fa fa-square"></i>
-             </span>
+             </span>                      
              <!-- Descriptive ratings for movies -->
              <div>
                {% set user_rating_list = item.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
@@ -115,10 +119,14 @@
                {% endif %}
                {# --- New Note Indicator Here --- #}
                {% set user_notes = item.notes | selectattr("user_id", "equalto", current_user.id) | list %}
-               {% set has_note = user_notes|length > 0 %}
-               <span style="color: {% if has_note %}green{% else %}gray{% endif %}; margin-left: 5px;" title="Note exists if green">
+               {% if user_notes|length > 0 %}
+                 {% set note_text = user_notes[0].content|trim %}
+               {% else %}
+                 {% set note_text = "" %}
+               {% endif %}
+               <span style="color: {% if note_text %}green{% else %}gray{% endif %}; margin-left: 5px;" title="Note exists if green">
                  <i class="fa fa-square"></i>
-               </span>
+               </span>                    
                <!-- Descriptive ratings for shows -->
                <div>
                  {% set user_rating_list = item.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
@@ -222,12 +230,18 @@
                      {% if valid_episodes|length > 0 and valid_episodes[0].air_date %}
                        <span class="text-muted">({{ valid_episodes[0].air_date.strftime('%Y-%m-%d') }})</span>
                      {% endif %}
-                     {# --- New Note Indicator Here --- #}
-                     {% set user_notes = item.notes | selectattr("user_id", "equalto", current_user.id) | list %}
-                     {% set has_note = user_notes|length > 0 %}
-                     <span style="color: {% if has_note %}green{% else %}gray{% endif %}; margin-left: 5px;" title="Note exists if green">
+                     {# --- New Note Indicator for Season --- #}
+                     {% set user_notes = season.notes | selectattr("user_id", "equalto", current_user.id) | list %}
+                     {% if user_notes|length > 0 %}
+                       {% set note_text = user_notes[0].content|trim %}
+                     {% else %}
+                       {% set note_text = "" %}
+                     {% endif %}
+                     <span style="color: {% if note_text %}green{% else %}gray{% endif %}; margin-left: 5px;" title="Note exists if green">
                        <i class="fa fa-square"></i>
                      </span>
+                     
+                        
                      <!-- Descriptive ratings for seasons -->
                      <div>
                        {% set user_rating_list = season.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
@@ -301,8 +315,8 @@
                 </div>
                 <div class="d-flex align-items-center">
                   <form action="{{ url_for('main.toggle_watched', content_type='season', content_id=season.id) }}" method="POST">
-                    <input type="checkbox" name="watched" value="true" onchange="this.form.submit()" title="Toggle watched status" {% if item.watched %}checked{% endif %}>
-                  </form>
+                    <input type="checkbox" name="watched" value="true" onchange="this.form.submit()" title="Toggle watched status" {% if season.watched %}checked{% endif %}>
+                  </form>                  
                 </div>
               </div>
               <!-- Collapsible area for episodes within this season -->
@@ -318,12 +332,18 @@
                               {% if episode.air_date %}
                                  <span class="text-muted">({{ episode.air_date.strftime('%Y-%m-%d') }})</span>
                               {% endif %}
-                              {# --- New Note Indicator Here --- #}
-                              {% set user_notes = item.notes | selectattr("user_id", "equalto", current_user.id) | list %}
-                              {% set has_note = user_notes|length > 0 %}
-                              <span style="color: {% if has_note %}green{% else %}gray{% endif %}; margin-left: 5px;" title="Note exists if green">
+                              {# --- New Note Indicator for Episode --- #}
+                              {% set user_notes = episode.notes | selectattr("user_id", "equalto", current_user.id) | list %}
+                              {% if user_notes|length > 0 %}
+                                {% set note_text = user_notes[0].content|trim %}
+                              {% else %}
+                                {% set note_text = "" %}
+                              {% endif %}
+                              <span style="color: {% if note_text %}green{% else %}gray{% endif %}; margin-left: 5px;" title="Note exists if green">
                                 <i class="fa fa-square"></i>
                               </span>
+                              
+                              
                               <!-- Descriptive ratings for episodes -->
                               <div>
                                 {% set user_rating_list = episode.ratings | selectattr("user_id", "equalto", current_user.id) | list %}
@@ -371,8 +391,8 @@
                           </div>
                           <div class="d-flex align-items-center">
                             <form action="{{ url_for('main.toggle_watched', content_type='episode', content_id=episode.id) }}" method="POST">
-                              <input type="checkbox" name="watched" value="true" onchange="this.form.submit()" title="Toggle watched status" {% if item.watched %}checked{% endif %}>
-                            </form>
+                              <input type="checkbox" name="watched" value="true" onchange="this.form.submit()" title="Toggle watched status" {% if episode.watched %}checked{% endif %}>
+                            </form>                            
                           </div>
                        </li>
                      {% endfor %}

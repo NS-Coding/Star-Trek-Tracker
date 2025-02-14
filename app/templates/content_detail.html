@@ -33,9 +33,16 @@
     <div class="form-group">
       <label for="note">Your Note</label>
       <!-- The textarea is given an id "noteEditor" so EasyMDE can attach to it -->
-      <textarea id="noteEditor" name="note" class="form-control" rows="4" placeholder="Enter your note here...">
-{% for note in content.notes if note.user_id == current_user.id %}{{ note.content }}{% endfor %}
-      </textarea>
+      {% set user_notes = content.notes | selectattr("user_id", "equalto", current_user.id) | list %}
+      {% if user_notes|length > 0 %}
+        {# Use the first note from the current user and trim extra whitespace #}
+        {% set user_note = user_notes[0].content|trim %}
+      {% else %}
+        {% set user_note = "" %}
+      {% endif %}
+      
+      <textarea id="noteEditor" name="note" class="form-control" rows="4" placeholder="Enter your note here...">{{ user_note }}</textarea>
+           
     </div>
     <button type="submit" class="btn btn-primary">Save Note & Rating</button>
   </form>

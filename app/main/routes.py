@@ -36,9 +36,11 @@ def dashboard():
         for show in shows:
             new_seasons = []
             for season in show.seasons:
-                unwatched_eps = [ep for ep in season.episodes if not ep.watched]
+                unwatched_eps = sorted(
+                    [ep for ep in season.episodes if not ep.watched],
+                    key=lambda ep: ep.episode_number
+                )
                 if unwatched_eps:
-                    # Temporarily attach the filtered episodes list
                     season.filtered_episodes = unwatched_eps
                     new_seasons.append(season)
             if new_seasons:
