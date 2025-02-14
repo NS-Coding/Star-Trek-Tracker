@@ -4,7 +4,7 @@ from datetime import datetime
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
-    id       = db.Column(db.Integer, primary_key=True)
+    id       = db.Column(db.Integer, primary_key=True, index=True)
     username = db.Column(db.String(128), unique=True, nullable=False)
     email    = db.Column(db.Text, unique=True, nullable=False)
     password = db.Column(db.Text, nullable=False)
@@ -22,7 +22,7 @@ def load_user(user_id):
 
 class Show(db.Model):
     __tablename__ = 'shows'
-    id          = db.Column(db.Integer, primary_key=True)
+    id          = db.Column(db.Integer, primary_key=True, index=True)
     title       = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text)
     order       = db.Column(db.Integer, index=True)
@@ -71,7 +71,7 @@ class Show(db.Model):
     
 class Season(db.Model):
     __tablename__ = 'seasons'
-    id          = db.Column(db.Integer, primary_key=True)
+    id          = db.Column(db.Integer, primary_key=True, index=True)
     number      = db.Column(db.Integer, nullable=False, index=True)
     show_id     = db.Column(db.Integer, db.ForeignKey('shows.id'), nullable=False)
     imdb_rating = db.Column(db.Float)
@@ -123,7 +123,7 @@ class Season(db.Model):
 
 class Episode(db.Model):
     __tablename__ = 'episodes'
-    id             = db.Column(db.Integer, primary_key=True)
+    id             = db.Column(db.Integer, primary_key=True, index=True)
     title          = db.Column(db.String(256), nullable=False)
     episode_number = db.Column(db.Integer, index=True)
     season_id      = db.Column(db.Integer, db.ForeignKey('seasons.id'), nullable=False)
@@ -147,7 +147,7 @@ class Episode(db.Model):
 
 class Movie(db.Model):
     __tablename__ = 'movies'
-    id           = db.Column(db.Integer, primary_key=True)
+    id           = db.Column(db.Integer, primary_key=True, index=True)
     title        = db.Column(db.String(128), nullable=False)
     release_date = db.Column(db.Date)
     description  = db.Column(db.Text)
@@ -177,7 +177,7 @@ class Rating(db.Model):
 
 class Note(db.Model):
     __tablename__ = 'notes'
-    id         = db.Column(db.Integer, primary_key=True)
+    id         = db.Column(db.Integer, primary_key=True, index=True)
     content    = db.Column(db.Text)
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     episode_id = db.Column(db.Integer, db.ForeignKey('episodes.id'), nullable=True)
