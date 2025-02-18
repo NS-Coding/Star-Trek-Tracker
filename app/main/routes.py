@@ -122,8 +122,9 @@ def content_detail(content_type, content_id):
         flash('Your note and rating have been saved.', 'success')
         return redirect(url_for('main.content_detail', content_type=content_type, content_id=content_id))
 
-    # ---- Build aggregated reviews (notes + ratings) ----
-    # Create a dictionary keyed by user_id
+    # ---- Build aggregated reviews (notes + ratings) using a bulk user query ----
+    user_ids = {r.user_id for r in content.ratings}.union({n.user_id for n in content.notes})
+    users = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()}
     reviews_dict = {}
     for rating in content.ratings:
         reviews_dict.setdefault(rating.user_id, {})['rating'] = rating.value
@@ -131,9 +132,7 @@ def content_detail(content_type, content_id):
         reviews_dict.setdefault(note.user_id, {})['note'] = note.content
     all_reviews = []
     for user_id, review in reviews_dict.items():
-        # Pull the user object via relationship (note that Note and Rating have backrefs to user)
-        user = User.query.get(user_id)
-        review['user'] = user
+        review['user'] = users.get(user_id)
         all_reviews.append(review)
     # Compute aggregated average rating (if any)
     if content.ratings:
