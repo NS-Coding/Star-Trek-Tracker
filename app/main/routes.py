@@ -174,16 +174,16 @@ def toggle_watched(content_type, content_id):
         item = Episode.query.get_or_404(content_id)
         item.watched = new_status
     elif content_type == 'season':
-        item = Season.query.get_or_404(content_id)
-        for episode in item.episodes:
-            episode.watched = new_status
+        # Bulk update all episodes in the season
+        Episode.query.filter_by(season_id=content_id)\
+                     .update({"watched": new_status}, synchronize_session='fetch')
     elif content_type == 'show':
-        item = Show.query.options(
-            joinedload(Show.seasons).joinedload(Season.episodes)
-        ).get_or_404(content_id)
-        for season in item.seasons:
-            for episode in season.episodes:
-                episode.watched = new_status
+        # Bulk update all episodes in every season of the show
+        show = Show.query.get_or_404(content_id)
+        season_ids = [season.id for season in show.seasons]
+        if season_ids:
+            Episode.query.filter(Episode.season_id.in_(season_ids))\
+                         .update({"watched": new_status}, synchronize_session='fetch')
     else:
         flash("Invalid content type for toggling watched status.", "danger")
         return redirect(url_for('main.dashboard'))
