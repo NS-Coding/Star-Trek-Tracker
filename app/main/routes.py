@@ -69,13 +69,17 @@ def content_detail(content_type, content_id):
         return redirect(url_for('main.dashboard'))
 
     if request.method == 'POST':
-        # Process note for current user
         note_text = request.form.get('note')
-        existing_note = None
-        for note in content.notes:
-            if note.user_id == current_user.id:
-                existing_note = note
-                break
+        if content_type == 'episode':
+            existing_note = Note.query.filter_by(episode_id=content.id, user_id=current_user.id).first()
+        elif content_type == 'movie':
+            existing_note = Note.query.filter_by(movie_id=content.id, user_id=current_user.id).first()
+        elif content_type == 'season':
+            existing_note = Note.query.filter_by(season_id=content.id, user_id=current_user.id).first()
+        elif content_type == 'show':
+            existing_note = Note.query.filter_by(show_id=content.id, user_id=current_user.id).first()
+        else:
+            existing_note = None
         if existing_note:
             existing_note.content = note_text
         else:
@@ -90,6 +94,7 @@ def content_detail(content_type, content_id):
                 new_note.show_id = content.id
             db.session.add(new_note)
 
+
         # Process rating for current user
         rating_value = request.form.get('rating')
         if rating_value:
@@ -100,11 +105,16 @@ def content_detail(content_type, content_id):
             except ValueError as e:
                 flash(str(e), 'danger')
                 return redirect(url_for('main.content_detail', content_type=content_type, content_id=content_id))
-            existing_rating = None
-            for r in content.ratings:
-                if r.user_id == current_user.id:
-                    existing_rating = r
-                    break
+            if content_type == 'episode':
+                existing_rating = Rating.query.filter_by(episode_id=content.id, user_id=current_user.id).first()
+            elif content_type == 'movie':
+                existing_rating = Rating.query.filter_by(movie_id=content.id, user_id=current_user.id).first()
+            elif content_type == 'season':
+                existing_rating = Rating.query.filter_by(season_id=content.id, user_id=current_user.id).first()
+            elif content_type == 'show':
+                existing_rating = Rating.query.filter_by(show_id=content.id, user_id=current_user.id).first()
+            else:
+                existing_rating = None
             if existing_rating:
                 existing_rating.value = rating_value
             else:
@@ -118,6 +128,7 @@ def content_detail(content_type, content_id):
                 elif content_type == 'show':
                     new_rating.show_id = content.id
                 db.session.add(new_rating)
+
         db.session.commit()
         flash('Your note and rating have been saved.', 'success')
         return redirect(url_for('main.content_detail', content_type=content_type, content_id=content_id))
