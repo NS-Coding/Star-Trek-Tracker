@@ -6,6 +6,8 @@ from sqlalchemy.orm import joinedload
 from flask import jsonify
 from app.models import Show, Season, Episode, Movie, Rating, Note, User
 from flask import Response
+from sqlalchemy.orm import joinedload
+
 
 
 
@@ -28,18 +30,18 @@ def dashboard():
     movies = Movie.query.order_by(Movie.order).all()
 
     if filter_option == 'unwatched':
-        # For movies: keep only unwatched movies
-        movies = [movie for movie in movies if not movie.watched]
-
-        # For each show, filter seasons and episodes
+        # Query only unwatched movies from the database.
+        movies = Movie.query.filter_by(watched=False).order_by(Movie.order).all()
+        
+        # For shows, fetch all and then filter seasons/episodes using a database query.
+        shows_all = Show.query.options(joinedload(Show.seasons)).order_by(Show.order).all()
         filtered_shows = []
-        for show in shows:
+        for show in shows_all:
             new_seasons = []
             for season in show.seasons:
-                unwatched_eps = sorted(
-                    [ep for ep in season.episodes if not ep.watched],
-                    key=lambda ep: ep.episode_number
-                )
+                # Offload filtering of unwatched episodes to the database.
+                unwatched_eps = Episode.query.filter_by(season_id=season.id, watched=False)\
+                                             .order_by(Episode.episode_number).all()
                 if unwatched_eps:
                     season.filtered_episodes = unwatched_eps
                     new_seasons.append(season)
@@ -47,6 +49,7 @@ def dashboard():
                 show.filtered_seasons = new_seasons
                 filtered_shows.append(show)
         shows = filtered_shows
+
 
     combined = shows + movies
     combined.sort(key=lambda x: x.order if x.order is not None else 9999)
