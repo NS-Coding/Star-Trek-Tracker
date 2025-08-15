@@ -1,0 +1,114 @@
+[
+  {
+    "title": "Star Trek: The Motion Picture",
+    "releaseDate": "1979-01-01T00:00:00",
+    "description": "When an alien spacecraft of enormous power is spotted approaching Earth, Admiral James T. Kirk resumes command of the overhauled USS Enterprise in order to intercept it.",
+    "order": 3,
+    "artworkUrl": "/images/movie_tt0079945.jpg",
+    "imdbRating": 6.4
+  },
+  {
+    "title": "Star Trek II: The Wrath of Khan",
+    "releaseDate": "1982-01-01T00:00:00",
+    "description": "With the assistance of the Enterprise crew, Admiral Kirk must stop an old nemesis, Khan Noonien Singh, from using the life-generating Genesis Device as the ultimate weapon.",
+    "order": 4,
+    "artworkUrl": "/images/movie_tt0084726.jpg",
+    "imdbRating": 7.7
+  },
+  {
+    "title": "Star Trek III: The Search for Spock",
+    "releaseDate": "1984-01-01T00:00:00",
+    "description": "Admiral Kirk and his bridge crew risk their careers stealing the decommissioned U.S.S. Enterprise to return to the restricted Genesis Planet to recover Spock's body.",
+    "order": 5,
+    "artworkUrl": "/images/movie_tt0088170.jpg",
+    "imdbRating": 6.6
+  },
+  {
+    "title": "Star Trek IV: The Voyage Home",
+    "releaseDate": "1986-01-01T00:00:00",
+    "description": "To save Earth from an alien probe, Admiral James T. Kirk and his fugitive crew go back in time to San Francisco in 1986 to retrieve the only beings who can communicate with it: humpback whales.",
+    "order": 6,
+    "artworkUrl": "/images/movie_tt0092007.jpg",
+    "imdbRating": 7.3
+  },
+  {
+    "title": "Star Trek V: The Final Frontier",
+    "releaseDate": "1989-01-01T00:00:00",
+    "description": "Captain Kirk and his crew must deal with Mr. Spock's long-lost half-brother who hijacks the Enterprise for an obsessive search for God at the center of the galaxy.",
+    "order": 7,
+    "artworkUrl": "/images/movie_tt0098382.jpg",
+    "imdbRating": 5.5
+  },
+  {
+    "title": "Star Trek VI: The Undiscovered Country",
+    "releaseDate": "1991-01-01T00:00:00",
+    "description": "On the eve of retirement, Kirk and McCoy are charged with assassinating the Klingon High Chancellor and imprisoned. The Enterprise crew must help them escape to thwart a conspiracy aimed at sabotaging the last best hope for peace.",
+    "order": 8,
+    "artworkUrl": "/images/movie_tt0102975.jpg",
+    "imdbRating": 7.2
+  },
+  {
+    "title": "Star Trek: Generations",
+    "releaseDate": "1994-01-01T00:00:00",
+    "description": "With the help of long presumed dead Captain Kirk, Captain Picard must stop a deranged scientist willing to murder on a planetary scale in order to enter a space matrix.",
+    "order": 10,
+    "artworkUrl": "/images/movie_tt0111280.jpg",
+    "imdbRating": 6.6
+  },
+  {
+    "title": "Star Trek: First Contact",
+    "releaseDate": "1996-01-01T00:00:00",
+    "description": "The Borg travel back in time intent on preventing Earth's first contact with an alien species. Captain Picard and his crew pursue them to ensure that Zefram Cochrane makes his maiden flight reaching warp speed.",
+    "order": 13,
+    "artworkUrl": "/images/movie_tt0117731.jpg",
+    "imdbRating": 7.6
+  },
+  {
+    "title": "Star Trek: Insurrection",
+    "releaseDate": "1998-01-01T00:00:00",
+    "description": "When the crew of the Enterprise learn of a Federation conspiracy against the inhabitants of a unique planet, Captain Picard begins an open rebellion.",
+    "order": 14,
+    "artworkUrl": "/images/movie_tt0120844.jpg",
+    "imdbRating": 6.4
+  },
+  {
+    "title": "Star Trek: Nemesis",
+    "releaseDate": "2002-01-01T00:00:00",
+    "description": "The Enterprise is diverted to the Romulan homeworld Romulus, supposedly because they want to negotiate a peace treaty. Captain Picard and his crew discover a serious threat to the Federation once Praetor Shinzon plans to attack Earth.",
+    "order": 15,
+    "artworkUrl": "/images/movie_tt0253754.jpg",
+    "imdbRating": 6.4
+  },
+  {
+    "title": "Star Trek",
+    "releaseDate": "2009-01-01T00:00:00",
+    "description": "The brash James T. Kirk tries to live up to his father's legacy with Mr. Spock keeping him in check as a vengeful Romulan from the future creates black holes to destroy the Federation one planet at a time.",
+    "order": 17,
+    "artworkUrl": "/images/movie_tt0796366.jpg",
+    "imdbRating": 7.9
+  },
+  {
+    "title": "Star Trek Into Darkness",
+    "releaseDate": "2013-01-01T00:00:00",
+    "description": "After the crew of the Enterprise find an unstoppable force of terror from within their own organization, Captain Kirk leads a manhunt to a war-zone world to capture a one-man weapon of mass destruction.",
+    "order": 18,
+    "artworkUrl": "/images/movie_tt1408101.jpg",
+    "imdbRating": 7.7
+  },
+  {
+    "title": "Star Trek Beyond",
+    "releaseDate": "2016-01-01T00:00:00",
+    "description": "The crew of the USS Enterprise explores the furthest reaches of uncharted space, where they encounter a new ruthless enemy, who puts them, and everything the Federation stands for, to the test.",
+    "order": 19,
+    "artworkUrl": "/images/movie_tt2660888.jpg",
+    "imdbRating": 7.0
+  },
+  {
+    "title": "Star Trek: Section 31",
+    "releaseDate": "2025-01-01T00:00:00",
+    "description": "In Star Trek: Section 31, Emperor Philippa Georgiou joins a secret division of Starfleet tasked with protecting the United Federation of Planets, and must face the sins of her past.",
+    "order": 26,
+    "artworkUrl": "/images/movie_tt9603060.jpg",
+    "imdbRating": 3.8
+  }
+]

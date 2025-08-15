@@ -1,0 +1,64 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+npm-cache/
+.pnpm-store/
+
+# Build outputs
+.next/
+.next/cache/
+out/
+dist/
+build/
+.cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing/coverage
+coverage/
+.jest/
+**/__tests__/**
+**/__snapshots__/**
+
+# Env files (keep example files)
+.env
+.env.*
+!.env.example
+
+# Tooling caches
+.eslintcache
+.stylelintcache
+.turbo/
+.swc/
+.parcel-cache/
+
+# IDE/editor
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Vercel/Netlify
+.vercel/
+.netlify/
+
+# Cypress/Playwright (if used)
+cypress/videos/
+cypress/screenshots/
+playwright-report/
+test-results/
+
+# Logs
+logs/
+*.log
+
+# Docker (optional)
+docker-data/
