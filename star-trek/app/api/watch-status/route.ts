@@ -48,17 +48,24 @@ export async function POST(request: Request) {
 
     let result
 
-    if (existingStatus) {
-      // Update existing status
-      result = await prisma.watchProgress.update({
-        where: { id: existingStatus.id },
-        data: { watched }
-      })
+    if (watched === false) {
+      // Unwatching: remove existing status to clear watch date
+      if (existingStatus) {
+        await prisma.watchProgress.delete({ where: { id: existingStatus.id } })
+      }
+      result = { success: true, watched: false }
     } else {
-      // Create new status
-      result = await prisma.watchProgress.create({
-        data
-      })
+      // Watching: ensure a record exists and set date to now
+      if (existingStatus) {
+        result = await prisma.watchProgress.update({
+          where: { id: existingStatus.id },
+          data: { watched: true, createdAt: new Date() },
+        })
+      } else {
+        result = await prisma.watchProgress.create({
+          data: { ...data, watched: true }
+        })
+      }
     }
 
     return NextResponse.json(result)

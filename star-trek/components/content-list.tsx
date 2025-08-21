@@ -4,6 +4,16 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Star } from "lucide-react"
@@ -42,6 +52,13 @@ export function ContentList({
   const [content, setContent] = useState<ContentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [defaultOpenKeys, setDefaultOpenKeys] = useState<string[]>([])
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean
+    id?: string
+    checked?: boolean
+    message?: string
+    type?: string
+  }>({ open: false })
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -88,7 +105,7 @@ export function ContentList({
     fetchContent()
   }, [])
 
-  const handleWatchedChange = async (id: string, checked: boolean) => {
+  const performWatchChange = async (id: string, checked: boolean) => {
     // First find the content item to get its type
     const findContentItem = (items: ContentItem[]): ContentItem | null => {
       for (const item of items) {
@@ -153,6 +170,39 @@ export function ContentList({
     } catch (error) {
       console.error('Error updating watch status:', error)
     }
+  }
+
+  const handleWatchedChange = async (id: string, checked: boolean) => {
+    const findContentItem = (items: ContentItem[]): ContentItem | null => {
+      for (const item of items) {
+        if (item.id === id) return item
+        if (item.children) {
+          const found = findContentItem(item.children)
+          if (found) return found
+        }
+      }
+      return null
+    }
+
+    const contentItem = findContentItem(content)
+    if (!contentItem) return
+
+    // Determine if confirmation needed and show themed dialog
+    let message: string | undefined
+    if (contentItem.watched && !checked) {
+      message = `Mark this ${contentItem.type} as unwatched? This will remove watch dates${
+        contentItem.type !== 'episode' ? ' and may affect its children' : ''
+      }.`
+    } else if ((contentItem.type === 'show' || contentItem.type === 'season') && checked) {
+      message = `Mark entire ${contentItem.type} as watched? This will cascade to all contained items.`
+    }
+
+    if (message) {
+      setConfirmState({ open: true, id, checked, message, type: contentItem.type })
+      return
+    }
+
+    await performWatchChange(id, checked)
   }
 
   const getRating = (item: ContentItem, ratingType: string) => {
@@ -241,7 +291,12 @@ export function ContentList({
 
           {item.children && (
             <CardContent>
-              <Accordion key={item.id} type="single" collapsible value={defaultOpenKeys.includes(item.id) ? item.id : undefined}>
+              <Accordion
+                key={item.id}
+                type="single"
+                collapsible
+                defaultValue={defaultOpenKeys.includes(item.id) ? `content-${item.id}` : undefined}
+              >
                 <AccordionItem value={`content-${item.id}`} className="border-none">
                   <AccordionTrigger className="py-2 text-orange-500 hover:text-orange-400">
                     View {item.type === "show" ? "Seasons" : "Episodes"}
@@ -372,6 +427,30 @@ export function ContentList({
           )}
         </Card>
       ))}
+      <AlertDialog open={confirmState.open} onOpenChange={(open) => setConfirmState((s) => ({ ...s, open }))}>
+        <AlertDialogContent className="lcars-panel">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Update</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmState.message}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (confirmState.id && typeof confirmState.checked === 'boolean') {
+                  await performWatchChange(confirmState.id, confirmState.checked)
+                }
+                setConfirmState({ open: false })
+              }}
+              className="lcars-button"
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

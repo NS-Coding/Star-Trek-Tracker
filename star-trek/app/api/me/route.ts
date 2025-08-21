@@ -16,10 +16,38 @@ export async function GET() {
 
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
+  // Totals and counts for episodes & movies only
+  const [totalEpisodes, totalMovies] = await Promise.all([
+    prisma.episode.count(),
+    prisma.movie.count(),
+  ])
+  const totalEpisodesMovies = totalEpisodes + totalMovies
+
+  const watchedEpisodesMovies = await prisma.watchProgress.count({
+    where: {
+      watched: true,
+      OR: [{ episodeId: { not: null } }, { movieId: { not: null } }],
+    },
+  })
+
+  const ratedEpisodesMovies = await prisma.rating.count({
+    where: {
+      userId: user.id,
+      OR: [{ episodeId: { not: null } }, { movieId: { not: null } }],
+    },
+  })
+
+  const notesEpisodesMovies = await prisma.note.count({
+    where: {
+      userId: user.id,
+      OR: [{ episodeId: { not: null } }, { movieId: { not: null } }],
+    },
+  })
+
   const ratingsCount = user.ratings.length
-  const watchedCount = await prisma.watchProgress.count({ where: { watched: true } })
-  const averageRating =
-    ratingsCount === 0 ? 0 : user.ratings.reduce((sum, r) => sum + r.value, 0) / ratingsCount
+  const averageRating = ratingsCount === 0
+    ? 0
+    : user.ratings.reduce((sum, r) => sum + r.value, 0) / ratingsCount
 
   // Favorites = top 5 highest ratings
   const favorites = await prisma.rating.findMany({
@@ -117,8 +145,10 @@ export async function GET() {
     joinDate: user.createdAt,
     isAdmin: user.isAdmin,
     stats: {
-      totalWatched: watchedCount,
-      totalRated: ratingsCount,
+      totalWatched: watchedEpisodesMovies,
+      totalRated: ratedEpisodesMovies,
+      notesWithContent: notesEpisodesMovies,
+      totalEpisodesMovies,
       averageRating,
     },
     favorites: favoritesOut,

@@ -1,8 +1,7 @@
 "use client"
 export const dynamic = "force-dynamic"
 
-import { useState, useEffect } from "react"
-import { signOut, useSession } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import useSWR from "swr"
 import axios from "axios"
 import { LcarsHeader } from "@/components/lcars-header"
@@ -10,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, Star, Eye, Clock, Calendar, Users } from "lucide-react"
+import { Download, Star, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 export default function ProfilePage() {
@@ -75,11 +74,15 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Episodes Watched:</span>
-                    <span>{stats.totalWatched}</span>
+                    <span>{stats.totalWatched} / {userData?.stats?.totalEpisodesMovies ?? 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Episodes Rated:</span>
-                    <span>{stats.totalRated}</span>
+                    <span>{stats.totalRated} / {userData?.stats?.totalEpisodesMovies ?? 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Episodes with Notes:</span>
+                    <span>{userData?.stats?.notesWithContent ?? 0} / {userData?.stats?.totalEpisodesMovies ?? 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Average Rating:</span>
@@ -115,52 +118,11 @@ export default function ProfilePage() {
           </div>
 
           <div className="md:col-span-2">
-            <Tabs defaultValue="activity" className="w-full">
+            <Tabs defaultValue="favorites" className="w-full">
               <TabsList className="lcars-tabs mb-6">
-                <TabsTrigger value="activity">Recent Activity</TabsTrigger>
                 <TabsTrigger value="favorites">Favorites</TabsTrigger>
                 <TabsTrigger value="notes">My Notes</TabsTrigger>
               </TabsList>
-
-              <TabsContent value="activity">
-                <Card className="lcars-panel">
-                  <CardHeader>
-                    <CardTitle>Recent Activity</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {(userData?.recentActivity || []).map((activity: any, index: number) => (
-                        <div key={index} className="p-3 bg-gray-900 rounded-lg">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <div className="flex items-center space-x-2">
-                                {activity.type === "watched" && <Eye className="h-4 w-4 text-blue-500" />}
-                                {activity.type === "rated" && <Star className="h-4 w-4 text-yellow-500" />}
-                                {activity.type === "note" && <Clock className="h-4 w-4 text-green-500" />}
-                                <span className="font-medium">{activity.title}</span>
-                              </div>
-                              <div className="text-sm text-gray-400 mt-1">
-                                {activity.type === "watched" && "Marked as watched"}
-                                {activity.type === "rated" && (
-                                  <span className="flex items-center">
-                                    Rated <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 mx-1" />
-                                    {activity.rating.toFixed(1)}
-                                  </span>
-                                )}
-                                {activity.type === "note" && "Added notes"}
-                              </div>
-                            </div>
-                            <div className="flex items-center">
-                              <Calendar className="h-3 w-3 text-gray-400 mr-1" />
-                              <span className="text-sm text-gray-400">{activity.timestamp?.split('T')[0]}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
               <TabsContent value="favorites">
                 <Card className="lcars-panel">
