@@ -31,6 +31,7 @@ interface ContentItem {
   averageIndividualRating?: number
   averageAggregateRating?: number
   imagePath?: string
+  hasUserNote?: boolean
   children?: ContentItem[]
 }
 
@@ -65,7 +66,7 @@ export function ContentList({
       try {
         const params = new URLSearchParams({
           type: contentType,
-          sortBy,
+          sortBy: sortBy === 'rating' ? 'imdbRating' : sortBy,
           unwatchedOnly: showUnwatchedOnly.toString(),
           search: searchQuery,
         })
@@ -76,7 +77,57 @@ export function ContentList({
           throw new Error('Failed to fetch content')
         }
         
-        const data: ContentItem[] = await response.json()
+        let data: ContentItem[] = await response.json()
+
+        // Apply client-side unwatched filtering strictly when enabled
+        if (showUnwatchedOnly) {
+          const filterUnwatched = (node: ContentItem): ContentItem | null => {
+            if (node.children && node.children.length > 0) {
+              const filteredChildren = node.children
+                .map(filterUnwatched)
+                .filter((n): n is ContentItem => n !== null)
+              if (filteredChildren.length === 0 && node.watched) {
+                return null
+              }
+              return { ...node, children: filteredChildren }
+            }
+            // Leaf node: hide if watched
+            return node.watched ? null : node
+          }
+          data = data
+            .map(filterUnwatched)
+            .filter((n): n is ContentItem => n !== null)
+        }
+
+        // If sorting by rating, only show media that has a user average (aggregateRating) and sort by it
+        if (sortBy === 'rating') {
+          const filterRated = (node: ContentItem): ContentItem | null => {
+            const hasOwn = node.aggregateRating !== undefined
+            if (node.children && node.children.length > 0) {
+              const filteredChildren = node.children
+                .map(filterRated)
+                .filter((n): n is ContentItem => n !== null)
+              // keep node if it has its own rating or any rated children
+              if (!hasOwn && filteredChildren.length === 0) return null
+              return { ...node, children: filteredChildren }
+            }
+            return hasOwn ? node : null
+          }
+
+          const sortByAggregateDesc = (items: ContentItem[]): ContentItem[] => {
+            const sorted = [...items].sort((a, b) => (b.aggregateRating || 0) - (a.aggregateRating || 0))
+            return sorted.map(it => ({
+              ...it,
+              children: it.children ? sortByAggregateDesc(it.children) : it.children,
+            }))
+          }
+
+          data = data
+            .map(filterRated)
+            .filter((n): n is ContentItem => n !== null)
+          data = sortByAggregateDesc(data)
+        }
+
         // find path to first episode not watched
         const pathKeys: string[] = []
         const dfs = (items: ContentItem[]): boolean => {
@@ -103,7 +154,7 @@ export function ContentList({
     }
 
     fetchContent()
-  }, [])
+  }, [contentType, sortBy, showUnwatchedOnly, searchQuery])
 
   const performWatchChange = async (id: string, checked: boolean) => {
     // First find the content item to get its type
@@ -250,17 +301,17 @@ export function ContentList({
                 className="lcars-checkbox"
               />
               <div className="flex items-center space-x-3">
-                {item.imagePath && (
-                  <div className="relative h-12 w-16 overflow-hidden rounded-md border border-orange-500">
+                {item.imagePath && (item.type === 'show' || item.type === 'movie') && (
+                  <div className="relative h-36 w-24 overflow-hidden rounded-md border border-orange-500 bg-black">
                     <Image
                       src={item.imagePath || "/placeholder.svg"}
                       alt={item.title}
-                      width={64}
-                      height={48}
-                      className="object-cover"
+                      fill
+                      sizes="(max-width: 768px) 96px, 144px"
+                      className="object-contain"
                       // Fallback to placeholder if image fails to load
                       onError={(e) => {
-                        e.currentTarget.src = `/placeholder.svg?height=48&width=64`
+                        e.currentTarget.src = `/placeholder.svg`
                       }}
                     />
                   </div>
@@ -272,7 +323,7 @@ export function ContentList({
                 </CardTitle>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               {getRating(item, ratingType) && (
                 <div className="flex items-center">
                   <Star
@@ -280,6 +331,16 @@ export function ContentList({
                   />
                   <span>{getRating(item, ratingType)?.toFixed(1)}</span>
                   <span className="text-xs text-gray-400 ml-1">{getRatingLabel(ratingType)}</span>
+                </div>
+              )}
+              {item.watched && (
+                <div className="flex items-center space-x-2">
+                  {item.individualRating === undefined && (
+                    <span className="px-2 py-0.5 text-xs rounded bg-orange-600/30 border border-orange-500 text-orange-300">Needs Rating</span>
+                  )}
+                  {item.hasUserNote !== undefined && !item.hasUserNote && (
+                    <span className="px-2 py-0.5 text-xs rounded bg-blue-600/30 border border-blue-500 text-blue-300">Needs Notes</span>
+                  )}
                 </div>
               )}
             </div>
@@ -314,20 +375,7 @@ export function ContentList({
                                 className="lcars-checkbox"
                               />
                               <div className="flex items-center space-x-3">
-                                {child.imagePath && (
-                                  <div className="relative h-10 w-14 overflow-hidden rounded-md border border-orange-500">
-                                    <Image
-                                      src={child.imagePath || "/placeholder.svg"}
-                                      alt={child.title}
-                                      width={56}
-                                      height={40}
-                                      className="object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.src = `/placeholder.svg?height=40&width=56`
-                                      }}
-                                    />
-                                  </div>
-                                )}
+                                {/* No thumbnails for seasons */}
                                 <Link
                                   href={`/content/${child.type}/${child.id}`}
                                   className="hover:text-orange-400 transition-colors font-medium"
@@ -336,15 +384,27 @@ export function ContentList({
                                 </Link>
                               </div>
                             </div>
-                            {getRating(child, ratingType) && (
-                              <div className="flex items-center">
-                                <Star
-                                  className={`h-4 w-4 mr-1 fill-current ${ratingType === "imdb" ? "text-blue-400" : "text-yellow-500"}`}
-                                />
-                                <span>{getRating(child, ratingType)?.toFixed(1)}</span>
-                                <span className="text-xs text-gray-400 ml-1">{getRatingLabel(ratingType)}</span>
-                              </div>
-                            )}
+                            <div className="flex items-center space-x-3">
+                              {getRating(child, ratingType) && (
+                                <div className="flex items-center">
+                                  <Star
+                                    className={`h-4 w-4 mr-1 fill-current ${ratingType === "imdb" ? "text-blue-400" : "text-yellow-500"}`}
+                                  />
+                                  <span>{getRating(child, ratingType)?.toFixed(1)}</span>
+                                  <span className="text-xs text-gray-400 ml-1">{getRatingLabel(ratingType)}</span>
+                                </div>
+                              )}
+                              {child.watched && (
+                                <div className="flex items-center space-x-2">
+                                  {child.individualRating === undefined && (
+                                    <span className="px-2 py-0.5 text-xs rounded bg-orange-600/30 border border-orange-500 text-orange-300">Needs Rating</span>
+                                  )}
+                                  {child.hasUserNote !== undefined && !child.hasUserNote && (
+                                    <span className="px-2 py-0.5 text-xs rounded bg-blue-600/30 border border-blue-500 text-blue-300">Needs Notes</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           <div className="pl-10">
@@ -372,20 +432,7 @@ export function ContentList({
                                               className="lcars-checkbox"
                                             />
                                             <div className="flex items-center space-x-3">
-                                              {episode.imagePath && (
-                                                <div className="relative h-8 w-12 overflow-hidden rounded-md border border-orange-500">
-                                                  <Image
-                                                    src={episode.imagePath || "/placeholder.svg"}
-                                                    alt={episode.title}
-                                                    width={48}
-                                                    height={32}
-                                                    className="object-cover"
-                                                    onError={(e) => {
-                                                      e.currentTarget.src = `/placeholder.svg?height=32&width=48`
-                                                    }}
-                                                  />
-                                                </div>
-                                              )}
+                                              {/* No thumbnails for episodes */}
                                               <Link
                                                 href={`/content/${episode.type}/${episode.id}`}
                                                 className="hover:text-orange-400 transition-colors"
@@ -394,17 +441,29 @@ export function ContentList({
                                               </Link>
                                             </div>
                                           </div>
-                                          {getRating(episode, ratingType) && (
-                                            <div className="flex items-center">
-                                              <Star
-                                                className={`h-4 w-4 mr-1 fill-current ${ratingType === "imdb" ? "text-blue-400" : "text-yellow-500"}`}
-                                              />
-                                              <span>{getRating(episode, ratingType)?.toFixed(1)}</span>
-                                              <span className="text-xs text-gray-400 ml-1">
-                                                {getRatingLabel(ratingType)}
-                                              </span>
-                                            </div>
-                                          )}
+                                          <div className="flex items-center space-x-3">
+                                            {getRating(episode, ratingType) && (
+                                              <div className="flex items-center">
+                                                <Star
+                                                  className={`h-4 w-4 mr-1 fill-current ${ratingType === "imdb" ? "text-blue-400" : "text-yellow-500"}`}
+                                                />
+                                                <span>{getRating(episode, ratingType)?.toFixed(1)}</span>
+                                                <span className="text-xs text-gray-400 ml-1">
+                                                  {getRatingLabel(ratingType)}
+                                                </span>
+                                              </div>
+                                            )}
+                                            {episode.watched && (
+                                              <div className="flex items-center space-x-2">
+                                                {episode.individualRating === undefined && (
+                                                  <span className="px-2 py-0.5 text-xs rounded bg-orange-600/30 border border-orange-500 text-orange-300">Needs Rating</span>
+                                                )}
+                                                {episode.hasUserNote !== undefined && !episode.hasUserNote && (
+                                                  <span className="px-2 py-0.5 text-xs rounded bg-blue-600/30 border border-blue-500 text-blue-300">Needs Notes</span>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
                                         {/* Place the DetailedRatings component right after each episode */}
                                         <div className="pl-10 mb-4">

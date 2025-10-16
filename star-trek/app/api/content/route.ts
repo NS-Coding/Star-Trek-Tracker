@@ -31,15 +31,18 @@ export async function GET(request: Request) {
                 episodes: {
                   include: {
                     ratings: true,
-                    watchStatus: true
+                    watchStatus: true,
+                    notes: true,
                   }
                 },
                 ratings: true,
-                watchStatus: true
+                watchStatus: true,
+                notes: true,
               }
             },
             ratings: true,
-            watchStatus: true
+            watchStatus: true,
+            notes: true,
           },
           orderBy: sortBy === 'title' 
             ? { title: 'asc' } 
@@ -61,7 +64,8 @@ export async function GET(request: Request) {
           },
           include: {
             ratings: true,
-            watchStatus: true
+            watchStatus: true,
+            notes: true,
           },
           orderBy: sortBy === 'title' 
             ? { title: 'asc' } 
@@ -91,15 +95,18 @@ export async function GET(request: Request) {
                 episodes: {
                   include: {
                     ratings: true,
-                    watchStatus: true
+                    watchStatus: true,
+                    notes: true,
                   }
                 },
                 ratings: true,
-                watchStatus: true
+                watchStatus: true,
+                notes: true,
               }
             },
             ratings: true,
-            watchStatus: true
+            watchStatus: true,
+            notes: true,
           }
         })
 
@@ -114,7 +121,8 @@ export async function GET(request: Request) {
           },
           include: {
             ratings: true,
-            watchStatus: true
+            watchStatus: true,
+            notes: true,
           }
         })
 
@@ -143,6 +151,11 @@ export async function GET(request: Request) {
         imagePath: item.artworkUrl || undefined,
       }
 
+      // User note presence
+      if ('notes' in item) {
+        baseItem.hasUserNote = session ? (item as any).notes?.some((n: any) => n.userId === session.user.id) : false
+      }
+
       // Calculate ratings
       if (item.ratings && item.ratings.length > 0) {
         const avgRating = item.ratings.reduce((sum, r) => sum + r.value, 0) / item.ratings.length
@@ -164,6 +177,10 @@ export async function GET(request: Request) {
             watched: season.watchStatus?.some(status => status.watched) || false,
             imdbRating: season.imdbRating || undefined,
             imagePath: season.artworkUrl || item.artworkUrl || undefined,
+          }
+
+          if ('notes' in season) {
+            seasonItem.hasUserNote = session ? (season as any).notes?.some((n: any) => n.userId === session.user.id) : false
           }
 
           // Calculate ratings for season
@@ -192,6 +209,7 @@ export async function GET(request: Request) {
               aggregateRating: episode.ratings && episode.ratings.length > 0
                 ? episode.ratings.reduce((sum, r) => sum + r.value, 0) / episode.ratings.length
                 : undefined,
+              hasUserNote: session ? (episode as any).notes?.some((n: any) => n.userId === session.user.id) : false,
             }))
 
             // Sort episodes by order
@@ -199,7 +217,9 @@ export async function GET(request: Request) {
 
             // Calculate average ratings from episodes
             if (seasonItem.children.length > 0) {
-              const validRatings = seasonItem.children.filter((ep: any) => ep.aggregateRating !== undefined)
+              const validRatings = seasonItem.children
+                .filter((ep: any) => ep.aggregateRating !== undefined)
+                .map((ep: any) => ({ aggregateRating: ep.aggregateRating as number | undefined })) as { aggregateRating?: number }[]
               if (validRatings.length > 0) {
                 seasonItem.averageAggregateRating = validRatings.reduce((sum, ep) => sum + (ep.aggregateRating || 0), 0) / validRatings.length
               }
@@ -214,7 +234,9 @@ export async function GET(request: Request) {
 
         // Calculate average ratings from seasons
         if (baseItem.children.length > 0) {
-          const validRatings = baseItem.children.filter((s: any) => s.aggregateRating !== undefined)
+          const validRatings = baseItem.children
+            .filter((s: any) => s.aggregateRating !== undefined)
+            .map((s: any) => ({ aggregateRating: s.aggregateRating as number | undefined })) as { aggregateRating?: number }[]
           if (validRatings.length > 0) {
             baseItem.averageAggregateRating = validRatings.reduce((sum, s) => sum + (s.aggregateRating || 0), 0) / validRatings.length
           }

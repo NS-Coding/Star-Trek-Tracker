@@ -28,6 +28,7 @@ model Show {
   order       Int?
   artworkUrl  String?
   imdbRating  Float?
+  runtime     Int?      // total minutes across all seasons/episodes
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   seasons     Season[]
@@ -43,6 +44,7 @@ model Season {
   showId      String
   imdbRating  Float?
   artworkUrl  String?
+  runtime     Int?      // total minutes across all episodes in this season
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   episodes    Episode[]
@@ -62,6 +64,8 @@ model Episode {
   airDate       DateTime?
   artworkUrl    String?
   imdbRating    Float?
+  description   String?   @db.Text
+  runtime       Int?      // minutes
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   ratings       Rating[]
@@ -79,6 +83,7 @@ model Movie {
   order        Int?
   artworkUrl   String?
   imdbRating   Float?
+  runtime      Int?      // minutes
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   ratings      Rating[]

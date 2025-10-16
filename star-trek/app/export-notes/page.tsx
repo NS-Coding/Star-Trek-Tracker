@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { LcarsHeader } from "@/components/lcars-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Download } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ReactMarkdown from "react-markdown"
@@ -25,8 +24,10 @@ interface Note {
 interface ContentItem {
   id: string
   title: string
-  type: string
+  type: "show" | "season" | "movie"
   noteCount: number
+  progressEpisodes?: { noted: number; total: number }
+  displayTitle?: string
 }
 
 export default function ExportNotesPage() {
@@ -36,103 +37,60 @@ export default function ExportNotesPage() {
   const [selectedContent, setSelectedContent] = useState<string[]>([])
   const [includeOtherUsers, setIncludeOtherUsers] = useState(false)
   const [exportFormat, setExportFormat] = useState("markdown")
-  const [contentFilter, setContentFilter] = useState("all")
 
+  // Load content summary whenever includeOtherUsers changes
   useEffect(() => {
-    // Mock data fetch - would be replaced with actual API call
-    setTimeout(() => {
-      const mockContentItems = [
-        { id: "tng", title: "Star Trek: The Next Generation", type: "show", noteCount: 5 },
-        { id: "ds9", title: "Star Trek: Deep Space Nine", type: "show", noteCount: 3 },
-        { id: "tng-s1-e5", title: "The Inner Light", type: "episode", noteCount: 4 },
-        { id: "first-contact", title: "Star Trek: First Contact", type: "movie", noteCount: 2 },
-      ]
-
-      const mockNotes = [
-        {
-          id: "1",
-          username: "current_user",
-          content:
-            "I found the character development in this episode particularly compelling.\n\n## Highlights\n- Picard's emotional journey\n- The flute melody is *haunting*\n- The ending scene is **powerful**",
-          timestamp: "2023-05-20T10:30:00Z",
-          contentId: "tng-s1-e5",
-          contentType: "episode",
-          contentTitle: "The Inner Light",
-        },
-        {
-          id: "2",
-          username: "picard",
-          content: "This episode explores the nature of humanity and consciousness in a profound way.",
-          timestamp: "2023-05-10T14:30:00Z",
-          contentId: "tng-s1-e5",
-          contentType: "episode",
-          contentTitle: "The Inner Light",
-        },
-        {
-          id: "3",
-          username: "data",
-          content:
-            "The philosophical implications of this narrative are fascinating. It raises questions about identity and perception.\n\n" +
-            "## Key Themes\n" +
-            "- Identity and self-perception\n" +
-            "- The nature of consciousness\n" +
-            "- **Time** and its subjective experience",
-          timestamp: "2023-05-15T09:15:00Z",
-          contentId: "tng-s1-e5",
-          contentType: "episode",
-          contentTitle: "The Inner Light",
-        },
-        {
-          id: "4",
-          username: "current_user",
-          content:
-            "The Borg are truly the most terrifying villains in Star Trek. Their collective consciousness represents the antithesis of Federation values.",
-          timestamp: "2023-04-12T16:45:00Z",
-          contentId: "first-contact",
-          contentType: "movie",
-          contentTitle: "Star Trek: First Contact",
-        },
-        {
-          id: "5",
-          username: "current_user",
-          content:
-            "TNG is my favorite Star Trek series. The character development and philosophical themes are unmatched.\n\n## Favorite Characters\n1. Picard\n2. Data\n3. Worf",
-          timestamp: "2023-03-05T11:20:00Z",
-          contentId: "tng",
-          contentType: "show",
-          contentTitle: "Star Trek: The Next Generation",
-        },
-      ]
-
-      setContentItems(mockContentItems)
-      setNotes(mockNotes)
-      setLoading(false)
-    }, 1000)
-  }, [])
-
-  const getFilteredContent = () => {
-    if (contentFilter === "all") {
-      return contentItems
-    } else {
-      return contentItems.filter((item) => item.type === contentFilter)
+    let cancelled = false
+    async function loadSummary() {
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/export-notes/summary?includeOthers=${includeOtherUsers ? "1" : "0"}`)
+        if (!res.ok) throw new Error("Failed to load content summary")
+        const data = (await res.json()) as { items: ContentItem[] }
+        if (!cancelled) {
+          setContentItems(data.items)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
-
-  const getFilteredNotes = () => {
-    let filtered = notes
-
-    // Filter by selected content
-    if (selectedContent.length > 0) {
-      filtered = filtered.filter((note) => selectedContent.includes(note.contentId))
+    loadSummary()
+    return () => {
+      cancelled = true
     }
+  }, [includeOtherUsers])
 
-    // Filter by user
-    if (!includeOtherUsers) {
-      filtered = filtered.filter((note) => note.username === "current_user")
+  // Load notes for preview when selection or includeOtherUsers or contentItems change
+  useEffect(() => {
+    let cancelled = false
+    async function loadNotes() {
+      if (contentItems.length === 0) {
+        setNotes([])
+        return
+      }
+      const idsToQuery = selectedContent.length > 0 ? selectedContent : contentItems.map((i) => i.id)
+      try {
+        const res = await fetch("/api/export-notes/notes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selectedIds: idsToQuery, includeOthers: includeOtherUsers }),
+        })
+        if (!res.ok) throw new Error("Failed to load notes")
+        const data = (await res.json()) as { notes: Note[] }
+        if (!cancelled) setNotes(data.notes)
+      } catch {
+        if (!cancelled) setNotes([])
+      }
     }
+    loadNotes()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedContent, includeOtherUsers, contentItems])
 
-    return filtered
-  }
+  const getFilteredContent = () => contentItems
+
+  const getFilteredNotes = () => notes
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -280,21 +238,7 @@ export default function ExportNotesPage() {
                     <Label htmlFor="include-others">Include notes from other users</Label>
                   </div>
 
-                  <div className="mb-4">
-                    <Label htmlFor="content-filter" className="mb-2 block">
-                      Filter Content Type
-                    </Label>
-                    <Select value={contentFilter} onValueChange={setContentFilter}>
-                      <SelectTrigger id="content-filter" className="border-orange-500 bg-black">
-                        <SelectValue placeholder="Select Content Type" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black border border-orange-500">
-                        <SelectItem value="all">All Content</SelectItem>
-                        <SelectItem value="show">Shows Only</SelectItem>
-                        <SelectItem value="movie">Movies Only</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Content type filter removed as per requirements */}
                 </div>
 
                 <div>
@@ -358,10 +302,10 @@ export default function ExportNotesPage() {
                               />
                               <div>
                                 <Label htmlFor={`content-${item.id}`} className="font-medium">
-                                  {item.title}
+                                  {item.displayTitle ?? item.title}
                                 </Label>
                                 <div className="text-sm text-gray-400">
-                                  {item.type.charAt(0).toUpperCase() + item.type.slice(1)} • {item.noteCount}
+                                  {(item.type.charAt(0).toUpperCase() + item.type.slice(1)) + ` • Notes: ${item.noteCount}`}
                                 </div>
                               </div>
                             </div>

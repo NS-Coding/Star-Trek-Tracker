@@ -18,8 +18,11 @@ export default function ContentPage() {
     type: string
     title: string
     summary?: string
+    airDate?: string
+    releaseDate?: string
     description?: string
     rating?: number
+    duration?: number
     imdbRating?: number
     userRating?: number
     watched?: boolean
@@ -56,6 +59,9 @@ export default function ContentPage() {
             (type === 'season' ? `Season ${data.number}` : 
             type === 'episode' ? `Episode ${data.episodeNumber}: ${data.title}` : data.title),
           summary: data.description,
+          duration: typeof data.runtime === 'number' ? data.runtime : undefined,
+          airDate: type === 'episode' && data.airDate ? String(data.airDate).split('T')[0] : undefined,
+          releaseDate: type === 'movie' && data.releaseDate ? String(data.releaseDate).split('T')[0] : undefined,
           rating: data.imdbRating,
           userRating: data.userRating,
           watched: data.watched || false,

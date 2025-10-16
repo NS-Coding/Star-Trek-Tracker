@@ -16,12 +16,16 @@ export async function GET() {
 
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  // Totals and counts for episodes & movies only
-  const [totalEpisodes, totalMovies] = await Promise.all([
+  // Totals
+  const [totalEpisodes, totalMovies, totalSeasons, totalShows] = await Promise.all([
     prisma.episode.count(),
     prisma.movie.count(),
+    prisma.season.count(),
+    prisma.show.count(),
   ])
-  const totalEpisodesMovies = totalEpisodes + totalMovies
+  const totalEpisodesMovies = totalEpisodes + totalMovies // still used for Watched (global)
+  const totalRateableContent = totalEpisodes + totalMovies + totalSeasons + totalShows
+  const totalNoteableContent = totalRateableContent
 
   const watchedEpisodesMovies = await prisma.watchProgress.count({
     where: {
@@ -30,17 +34,27 @@ export async function GET() {
     },
   })
 
-  const ratedEpisodesMovies = await prisma.rating.count({
+  const ratedAllContent = await prisma.rating.count({
     where: {
       userId: user.id,
-      OR: [{ episodeId: { not: null } }, { movieId: { not: null } }],
+      OR: [
+        { episodeId: { not: null } },
+        { movieId: { not: null } },
+        { seasonId: { not: null } },
+        { showId: { not: null } },
+      ],
     },
   })
 
-  const notesEpisodesMovies = await prisma.note.count({
+  const notesAllContent = await prisma.note.count({
     where: {
       userId: user.id,
-      OR: [{ episodeId: { not: null } }, { movieId: { not: null } }],
+      OR: [
+        { episodeId: { not: null } },
+        { movieId: { not: null } },
+        { seasonId: { not: null } },
+        { showId: { not: null } },
+      ],
     },
   })
 
@@ -146,9 +160,11 @@ export async function GET() {
     isAdmin: user.isAdmin,
     stats: {
       totalWatched: watchedEpisodesMovies,
-      totalRated: ratedEpisodesMovies,
-      notesWithContent: notesEpisodesMovies,
+      totalRated: ratedAllContent,
+      notesWithContent: notesAllContent,
       totalEpisodesMovies,
+      totalRateableContent,
+      totalNoteableContent,
       averageRating,
     },
     favorites: favoritesOut,

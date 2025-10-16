@@ -78,11 +78,11 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Episodes Rated:</span>
-                    <span>{stats.totalRated} / {userData?.stats?.totalEpisodesMovies ?? 0}</span>
+                    <span>{stats.totalRated} / {userData?.stats?.totalRateableContent ?? 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Episodes with Notes:</span>
-                    <span>{userData?.stats?.notesWithContent ?? 0} / {userData?.stats?.totalEpisodesMovies ?? 0}</span>
+                    <span>{userData?.stats?.notesWithContent ?? 0} / {userData?.stats?.totalNoteableContent ?? 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Average Rating:</span>

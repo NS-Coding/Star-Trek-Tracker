@@ -32,7 +32,8 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
       setLoading(true)
       await onSubmit({ username, password })
     } catch (err) {
-      setError("Invalid username or password")
+      const message = err instanceof Error ? err.message : "Invalid username or password"
+      setError(message)
     } finally {
       setLoading(false)
     }

@@ -34,6 +34,20 @@ export function ContentDetails({ content }: ContentDetailsProps) {
             </div>
           )}
 
+          {(content.type === "episode" && content.airDate) && (
+            <div className="mb-6 -mt-4 flex items-center gap-2 text-sm text-gray-400">
+              <Calendar className="h-4 w-4 text-orange-500" />
+              <span>Aired: {content.airDate}</span>
+            </div>
+          )}
+
+          {(content.type === "movie" && content.releaseDate) && (
+            <div className="mb-6 -mt-4 flex items-center gap-2 text-sm text-gray-400">
+              <Calendar className="h-4 w-4 text-orange-500" />
+              <span>Released: {content.releaseDate}</span>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-4 mb-6">
             {content.watchedDate && (
               <div className="flex items-center gap-2">

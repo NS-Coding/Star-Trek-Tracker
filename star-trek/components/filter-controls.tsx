@@ -1,10 +1,8 @@
 "use client"
-
-import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Search, Filter } from "lucide-react"
+import { Search } from "lucide-react"
 
 interface FilterControlsProps {
   showUnwatchedOnly: boolean
@@ -73,7 +71,6 @@ export function FilterControls({
             </SelectTrigger>
             <SelectContent className="bg-black border border-orange-500">
               <SelectItem value="order">Chronological</SelectItem>
-              <SelectItem value="title">Title</SelectItem>
               <SelectItem value="rating">Rating</SelectItem>
             </SelectContent>
           </Select>
@@ -89,10 +86,7 @@ export function FilterControls({
             </SelectContent>
           </Select>
 
-          <Button className="lcars-button">
-            <Filter className="h-4 w-4 mr-2" />
-            Apply Filters
-          </Button>
+          {/* Filters auto-apply on change; no action button needed */}
         </div>
       </div>
     </div>
