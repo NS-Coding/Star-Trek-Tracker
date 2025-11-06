@@ -57,7 +57,7 @@ export default function LoginPage() {
     router.push("/")
   }
 
-  const handleRegister = async (data: { username: string; email: string; password: string }) => {
+  const handleRegister = async (data: { username: string; email: string; password: string; inviteCode: string }) => {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

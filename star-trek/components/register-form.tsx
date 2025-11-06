@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { AlertCircle, Info } from "lucide-react"
 
 interface RegisterFormProps {
-  onSubmit: (data: { username: string; email: string; password: string }) => Promise<void>
+  onSubmit: (data: { username: string; email: string; password: string; inviteCode: string }) => Promise<void>
 }
 
 export function RegisterForm({ onSubmit }: RegisterFormProps) {
@@ -18,6 +18,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [inviteCode, setInviteCode] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -25,7 +26,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
     e.preventDefault()
     setError("")
 
-    if (!username || !email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword || !inviteCode) {
       setError("Please fill in all fields")
       return
     }
@@ -37,7 +38,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
 
     try {
       setLoading(true)
-      await onSubmit({ username, email, password })
+      await onSubmit({ username, email, password, inviteCode })
     } catch (err) {
       setError("Registration failed. Please try again.")
     } finally {
@@ -73,6 +74,17 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               className="bg-black border-orange-500"
               placeholder="Enter your email"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="invite-code">Invite Code</Label>
+            <Input
+              id="invite-code"
+              type="password"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              className="bg-black border-orange-500"
+              placeholder="Enter your invite code"
             />
           </div>
           <div className="space-y-2">

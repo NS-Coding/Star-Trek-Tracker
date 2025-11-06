@@ -56,8 +56,8 @@ export async function PATCH(req: Request) {
         updated = await query(`UPDATE users SET is_approved = true, updated_at = now() WHERE id = $1 RETURNING id, username, email, is_admin, is_approved, created_at`, [userId])
         break
       case "reject":
-        updated = await query(`UPDATE users SET is_approved = false, updated_at = now() WHERE id = $1 RETURNING id, username, email, is_admin, is_approved, created_at`, [userId])
-        break
+        await query(`DELETE FROM users WHERE id = $1`, [userId])
+        return NextResponse.json({ success: true })
       case "toggleAdmin":
         updated = await query(`UPDATE users SET is_admin = $2, updated_at = now() WHERE id = $1 RETURNING id, username, email, is_admin, is_approved, created_at`, [userId, body.makeAdmin ?? false])
         break
