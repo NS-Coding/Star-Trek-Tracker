@@ -1,36 +1,11 @@
 version: '3.8'
 services:
-  star-trek-db:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: startrekdb
-    volumes:
-      - ./database:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  prisma-studio:
-    image: node:20
-    working_dir: /app
-    volumes:
-      - ./star-trek:/app
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@star-trek-db:5432/startrekdb?schema=public
-    command: sh -c "npm install && npx prisma generate && npx prisma studio --port 5555 --hostname 0.0.0.0"
-    ports:
-      - "5555:5555"
-    depends_on:
-      - star-trek-db
 
   star-trek-ui:
     build:
       context: ./star-trek
     ports:
       - "3000:3000"
-    depends_on:
-      - star-trek-db
     env_file:
       - .env
     environment:

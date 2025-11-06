@@ -74,11 +74,20 @@ export function ContentDetails({ content }: ContentDetailsProps) {
           {content.type === "show" && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-2">Watch Progress</h3>
-              <Progress value={65} className="h-2 bg-gray-700" indicatorClassName="bg-orange-500" />
-              <div className="flex justify-between mt-1 text-sm text-gray-400">
-                <span>65% Complete</span>
-                <span>13/20 Episodes</span>
-              </div>
+              {(() => {
+                const total = Number(content.progress?.total ?? 0)
+                const watched = Number(content.progress?.watched ?? 0)
+                const pct = total > 0 ? Math.round((watched / total) * 100) : 0
+                return (
+                  <>
+                    <Progress value={pct} className="h-2 bg-gray-700 [&>div]:bg-orange-500" />
+                    <div className="flex justify-between mt-1 text-sm text-gray-400">
+                      <span>{pct}% Complete</span>
+                      <span>{watched}/{total} Episodes</span>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           )}
         </div>

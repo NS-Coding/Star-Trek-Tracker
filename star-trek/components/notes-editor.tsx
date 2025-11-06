@@ -42,12 +42,14 @@ export function NotesEditor({ contentId, contentType }: NotesEditorProps) {
         setNotes(data.notes || [])
         
         // Find current user's note if it exists
-        const userNoteData = data.notes?.find((note: Note) => note.username === 'current_user')
-        if (userNoteData) {
-          setUserNote(userNoteData.content)
-        } else {
-          // Default empty note or template
-          setUserNote('')
+        const currentUserId = session?.user?.id
+        if (currentUserId) {
+          const userNoteData = (data.notes || []).find((note: any) => note.userId === currentUserId)
+          if (userNoteData) {
+            setUserNote(userNoteData.content)
+          } else {
+            setUserNote('')
+          }
         }
       } catch (error) {
         console.error('Error fetching notes:', error)
@@ -57,7 +59,7 @@ export function NotesEditor({ contentId, contentType }: NotesEditorProps) {
     if (contentId && contentType) {
       fetchNotes()
     }
-  }, [contentId, contentType])
+  }, [contentId, contentType, session?.user?.id])
 
   useEffect(() => {
     const saveInterval = setInterval(() => {

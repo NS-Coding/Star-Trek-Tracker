@@ -1,16 +1,13 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { getServerSession, type NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
-
-import prisma from "@/lib/prisma"
+import { query } from "@/lib/db"
 
 /**
  * Next-Auth configuration bound to our Prisma schema.
  * We use JWT sessions so that we don’t need the Session table.
  */
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
   },
@@ -27,11 +24,13 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.username || !credentials.password) return null
 
-        const user = await prisma.user.findUnique({
-          where: { username: credentials.username },
-        })
-
-        if (!user || !user.isApproved) return null
+        // Lookup user by username
+        const { rows } = await query<{ id: string; username: string; email: string; password: string; is_admin: boolean; is_approved: boolean }>(
+          `SELECT id, username, email, password, is_admin, is_approved FROM users WHERE username = $1`,
+          [credentials.username]
+        )
+        const user = rows[0]
+        if (!user || !user.is_approved) return null
 
         const isValid = await bcrypt.compare(credentials.password, user.password)
         if (!isValid) return null
@@ -40,7 +39,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           username: user.username,
           email: user.email,
-          isAdmin: user.isAdmin,
+          isAdmin: user.is_admin,
         } as any
       },
     }),

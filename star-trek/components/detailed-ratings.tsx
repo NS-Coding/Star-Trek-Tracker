@@ -15,6 +15,7 @@ interface DetailedRatingsProps {
 
 export function DetailedRatings({ item, ratingType }: DetailedRatingsProps) {
   const isShowOrSeason = item.type === "show" || item.type === "season"
+  const showImdb = item.type === "show" || item.type === "movie" || item.type === "episode"
 
   return (
     <Accordion type="single" collapsible className="border-none">
@@ -39,13 +40,15 @@ export function DetailedRatings({ item, ratingType }: DetailedRatingsProps) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">IMDb Rating:</span>
-                <div className="flex items-center">
-                  <Star className="h-3 w-3 text-blue-400 fill-blue-400 mr-1" />
-                  <span>{item.imdbRating?.toFixed(1) || "N/A"}</span>
+              {showImdb && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">IMDb Rating:</span>
+                  <div className="flex items-center">
+                    <Star className="h-3 w-3 text-blue-400 fill-blue-400 mr-1" />
+                    <span>{item.imdbRating?.toFixed(1) || "N/A"}</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {isShowOrSeason && (
                 <>

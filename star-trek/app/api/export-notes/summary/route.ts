@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { query } from "@/lib/db"
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
@@ -13,74 +13,79 @@ export async function GET(req: Request) {
   }
   const userId = session.user.id
 
-  // Shows with episode progress and note counts
-  const shows = await prisma.show.findMany({
-    orderBy: [{ order: "asc" as const }, { title: "asc" as const }],
-    select: { id: true, title: true, seasons: { select: { id: true, episodes: { select: { id: true } } } } },
-  })
+  // Shows
+  const { rows: shows } = await query<{ id: string; title: string; order: number | null }>(
+    `SELECT id, title, "order" FROM shows ORDER BY "order" ASC NULLS LAST, title ASC`
+  )
 
-  // Seasons (for counts/progress only; not selectable)
-  const seasons = await prisma.season.findMany({
-    orderBy: [{ number: "asc" }],
-    select: {
-      id: true,
-      number: true,
-      show: { select: { id: true, title: true } },
-      showId: true,
-      episodes: { select: { id: true } },
-    },
-  })
+  // Seasons (basic info)
+  const { rows: seasons } = await query<{ id: string; number: number; show_id: string }>(
+    `SELECT id, number, show_id FROM seasons ORDER BY number ASC`
+  )
+
+  // Episodes count per season
+  const { rows: seasonEpCounts } = await query<{ season_id: string; cnt: string }>(
+    `SELECT season_id, COUNT(*)::text AS cnt FROM episodes GROUP BY season_id`
+  )
+  const seasonTotalEp = new Map<string, number>(seasonEpCounts.map(r => [r.season_id, parseInt(r.cnt, 10)]))
 
   // Movies
-  const movies = await prisma.movie.findMany({
-    orderBy: [{ order: "asc" as const }, { title: "asc" as const }],
-    select: { id: true, title: true },
-  })
+  const { rows: movies } = await query<{ id: string; title: string; order: number | null }>(
+    `SELECT id, title, "order" FROM movies ORDER BY "order" ASC NULLS LAST, title ASC`
+  )
 
   // Notes grouped for counts
-  const notesWhere = includeOthers
-    ? {}
-    : { userId }
+  // Notes breakdown
+  const userFilter = includeOthers ? [] : [userId]
+  const userSql = includeOthers ? "" : "WHERE n.user_id = $1"
+  const paramIdxOffset = includeOthers ? 0 : 1
 
-  const episodeNotes = await prisma.note.findMany({
-    where: { ...notesWhere, NOT: { episodeId: null } },
-    select: { id: true, episode: { select: { id: true, season: { select: { id: true, showId: true } } } } },
-  })
+  // Episode notes with season and show linkage
+  const { rows: episodeNotes } = await query<{ episode_id: string; season_id: string; show_id: string }>(
+    `SELECT n.episode_id, s.id AS season_id, s.show_id
+     FROM notes n
+     JOIN episodes e ON n.episode_id = e.id
+     JOIN seasons s ON e.season_id = s.id
+     ${userSql}`,
+    userFilter as any
+  )
 
-  const showNotes = await prisma.note.findMany({
-    where: { ...notesWhere, NOT: { showId: null } },
-    select: { id: true, showId: true },
-  })
+  const { rows: showNotes } = await query<{ show_id: string }>(
+    `SELECT n.show_id FROM notes n WHERE n.show_id IS NOT NULL ${includeOthers ? "" : "AND n.user_id = $1"}`,
+    userFilter as any
+  )
 
-  const seasonNotes = await prisma.note.findMany({
-    where: { ...notesWhere, NOT: { seasonId: null } },
-    select: { id: true, season: { select: { id: true, showId: true } } },
-  })
+  const { rows: seasonNotes } = await query<{ season_id: string; show_id: string }>(
+    `SELECT s.id AS season_id, s.show_id
+     FROM notes n JOIN seasons s ON n.season_id = s.id
+     ${userSql}`,
+    userFilter as any
+  )
 
-  const movieNotes = await prisma.note.findMany({
-    where: { ...notesWhere, NOT: { movieId: null } },
-    select: { id: true, movieId: true },
-  })
+  const { rows: movieNotes } = await query<{ movie_id: string }>(
+    `SELECT n.movie_id FROM notes n WHERE n.movie_id IS NOT NULL ${includeOthers ? "" : "AND n.user_id = $1"}`,
+    userFilter as any
+  )
 
   // Compute episode-level noted counts per season and show (distinct episodes)
   const notedEpisodeIdsBySeason = new Map<string, Set<string>>()
   const notedEpisodeIdsByShow = new Map<string, Set<string>>()
   for (const n of episodeNotes) {
-    const seasonId = n.episode?.season.id!
-    const showId = n.episode?.season.showId!
+    const seasonId = n.season_id
+    const showId = n.show_id
     if (!notedEpisodeIdsBySeason.has(seasonId)) notedEpisodeIdsBySeason.set(seasonId, new Set())
-    notedEpisodeIdsBySeason.get(seasonId)!.add(n.episode!.id)
+    notedEpisodeIdsBySeason.get(seasonId)!.add(n.episode_id)
     if (!notedEpisodeIdsByShow.has(showId)) notedEpisodeIdsByShow.set(showId, new Set())
-    notedEpisodeIdsByShow.get(showId)!.add(n.episode!.id)
+    notedEpisodeIdsByShow.get(showId)!.add(n.episode_id)
   }
 
   // Aggregate note counts per entity
   const noteCountByShow = new Map<string, number>()
   const noteCountBySeason = new Map<string, number>()
   const noteCountByMovie = new Map<string, number>()
-  for (const n of showNotes) noteCountByShow.set(n.showId!, (noteCountByShow.get(n.showId!) || 0) + 1)
-  for (const n of seasonNotes) noteCountBySeason.set(n.season!.id, (noteCountBySeason.get(n.season!.id) || 0) + 1)
-  for (const n of movieNotes) noteCountByMovie.set(n.movieId!, (noteCountByMovie.get(n.movieId!) || 0) + 1)
+  for (const n of showNotes) noteCountByShow.set(n.show_id, (noteCountByShow.get(n.show_id) || 0) + 1)
+  for (const n of seasonNotes) noteCountBySeason.set(n.season_id, (noteCountBySeason.get(n.season_id) || 0) + 1)
+  for (const n of movieNotes) noteCountByMovie.set(n.movie_id, (noteCountByMovie.get(n.movie_id) || 0) + 1)
 
   // Include episode-notes in counts at parent levels for visibility
   for (const [seasonId, set] of notedEpisodeIdsBySeason) {
@@ -90,10 +95,8 @@ export async function GET(req: Request) {
   for (const show of shows) {
     const showId = show.id
     const episodeCount = notedEpisodeIdsByShow.get(showId)?.size || 0
-    // add noted episodes
     noteCountByShow.set(showId, (noteCountByShow.get(showId) || 0) + episodeCount)
-    // add season-level notes under this show
-    const seasonsForShow = seasons.filter((s) => s.showId === showId)
+    const seasonsForShow = seasons.filter((s) => s.show_id === showId)
     let seasonLevelNotes = 0
     for (const s of seasonsForShow) {
       seasonLevelNotes += noteCountBySeason.get(s.id) || 0
@@ -112,7 +115,9 @@ export async function GET(req: Request) {
 
   // Shows
   for (const sh of shows) {
-    const totalEpisodes = sh.seasons.reduce((acc, s) => acc + s.episodes.length, 0)
+    const totalEpisodes = seasons
+      .filter((s) => s.show_id === sh.id)
+      .reduce((acc, s) => acc + (seasonTotalEp.get(s.id) || 0), 0)
     const notedEpisodes = notedEpisodeIdsByShow.get(sh.id)?.size || 0
     const noteCount = noteCountByShow.get(sh.id) || 0
     items.push({

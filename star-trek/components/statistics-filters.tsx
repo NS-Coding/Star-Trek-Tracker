@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useState } from "react"
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
@@ -17,6 +19,21 @@ interface StatisticsFiltersProps {
 }
 
 export function StatisticsFilters({ filters, setFilters }: StatisticsFiltersProps) {
+  const [availableUsers, setAvailableUsers] = useState<{ id: string; username: string }[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadUsers() {
+      try {
+        const res = await fetch('/api/users')
+        if (!res.ok) return
+        const json = await res.json()
+        if (!cancelled) setAvailableUsers(Array.isArray(json.users) ? json.users : [])
+      } catch {}
+    }
+    loadUsers()
+    return () => { cancelled = true }
+  }, [])
   const handleSeriesChange = (value: string) => {
     setFilters({ ...filters, series: value })
   }
@@ -104,33 +121,17 @@ export function StatisticsFilters({ filters, setFilters }: StatisticsFiltersProp
                 />
                 <Label htmlFor="user-current">Current User</Label>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="user-picard"
-                  checked={filters.users.includes("picard")}
-                  onCheckedChange={(checked) => handleUserToggle("picard", checked as boolean)}
-                  className="lcars-checkbox"
-                />
-                <Label htmlFor="user-picard">Picard</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="user-riker"
-                  checked={filters.users.includes("riker")}
-                  onCheckedChange={(checked) => handleUserToggle("riker", checked as boolean)}
-                  className="lcars-checkbox"
-                />
-                <Label htmlFor="user-riker">Riker</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="user-data"
-                  checked={filters.users.includes("data")}
-                  onCheckedChange={(checked) => handleUserToggle("data", checked as boolean)}
-                  className="lcars-checkbox"
-                />
-                <Label htmlFor="user-data">Data</Label>
-              </div>
+              {availableUsers.map((u) => (
+                <div key={u.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`user-${u.id}`}
+                    checked={filters.users.includes(u.id)}
+                    onCheckedChange={(checked) => handleUserToggle(u.id, checked as boolean)}
+                    className="lcars-checkbox"
+                  />
+                  <Label htmlFor={`user-${u.id}`}>{u.username}</Label>
+                </div>
+              ))}
             </div>
           </div>
         </div>

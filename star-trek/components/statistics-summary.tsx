@@ -22,25 +22,55 @@ interface StatsSummary {
   watchedMovies: number
   totalMovies: number
 }
+interface UserAverage { user: string; average: number }
 
 export function StatisticsSummary({ filters }: StatisticsSummaryProps) {
   const [stats, setStats] = useState<StatsSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userAverages, setUserAverages] = useState<UserAverage[]>([])
 
   useEffect(() => {
-    // Mock data fetch - would be replaced with actual API call
-    setTimeout(() => {
-      setStats({
-        totalAverageRating: 8.4,
-        totalWatchTime: 312, // hours
-        totalPossibleWatchTime: 520, // hours
-        watchedEpisodes: 423,
-        totalEpisodes: 695,
-        watchedMovies: 9,
-        totalMovies: 13,
-      })
-      setLoading(false)
-    }, 500)
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const scope = (() => {
+          if (filters.series === 'movies') return 'movies'
+          if (filters.series === 'all') return 'all'
+          // until series filter is wired with real IDs, treat other values as 'series'
+          return 'series'
+        })()
+        const users = (() => {
+          const nonCurrent = filters.users.filter(u => u !== 'current')
+          if (nonCurrent.length > 0) return 'all'
+          return ['current']
+        })()
+        const res = await fetch('/api/statistics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scope, timeRange: filters.timeRange || 'all', users }),
+        })
+        if (!res.ok) throw new Error('Failed to load statistics')
+        const data = await res.json()
+        const s = data.summary || {}
+        if (!cancelled) {
+          setStats({
+            totalAverageRating: Number(data.summary?.averageRating ?? 0),
+            totalWatchTime: Number(s.watchTimeHours ?? 0),
+            totalPossibleWatchTime: Number(s.possibleHours ?? 0),
+            watchedEpisodes: Number(s.watchedEpisodes ?? s.watchedCount ?? 0),
+            totalEpisodes: Number(s.totalEpisodes ?? s.totalCount ?? 0),
+            watchedMovies: Number(s.watchedMovies ?? 0),
+            totalMovies: Number(s.totalMovies ?? 0),
+          })
+          setUserAverages(Array.isArray(data.usersAverage) ? data.usersAverage : [])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
   }, [filters])
 
   if (loading || !stats) {
@@ -131,6 +161,29 @@ export function StatisticsSummary({ filters }: StatisticsSummaryProps) {
           </div>
         </CardContent>
       </Card>
+      {/* Per-user averages card spans full width below */}
+      <div className="md:col-span-3 col-span-1">
+        <Card className="lcars-panel">
+          <CardContent className="p-6">
+            <div className="flex items-center mb-3">
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500 mr-2" />
+              <h3 className="text-lg font-medium">Per-User Average Ratings</h3>
+            </div>
+            {userAverages.length === 0 ? (
+              <div className="text-gray-400 text-sm">No user ratings found.</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {userAverages.map((u) => (
+                  <div key={u.user} className="flex items-center justify-between bg-gray-900/60 rounded px-3 py-2">
+                    <span className="text-gray-300">{u.user}</span>
+                    <span className="text-orange-400 font-semibold">{Number(u.average).toFixed(1)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -1,90 +1,36 @@
 "use client"
-
-import { useState, useEffect } from "react"
 import { LcarsHeader } from "@/components/lcars-header"
-import { StatisticsFilters } from "@/components/statistics-filters"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatisticsSummary } from "@/components/statistics-summary"
 import { RatingDistributionChart } from "@/components/charts/rating-distribution-chart"
 import { WatchProgressChart } from "@/components/charts/watch-progress-chart"
 import { UserComparisonChart } from "@/components/charts/user-comparison-chart"
 import { RatingTrendChart } from "@/components/charts/rating-trend-chart"
-import { AdminUserStats } from "@/components/admin/admin-user-stats"
+import { ActivityTable } from "@/components/statistics-activity-table"
 
 export default function StatisticsPage() {
-  const [filters, setFilters] = useState({
+  // Fixed scope: show data for all users, whole library
+  const filters = {
     series: "all",
     timeRange: "all",
-    users: ["current"],
-  })
+    users: ["all"] as string[],
+  }
 
-  const [activeUsers, setActiveUsers] = useState<any[]>([])
-
-  useEffect(() => {
-    // Mock data fetch - would be replaced with actual API call
-    setTimeout(() => {
-      setActiveUsers([
-        {
-          id: "1",
-          username: "picard",
-          email: "picard@starfleet.org",
-          isAdmin: true,
-          status: "active",
-          createdAt: "2023-01-15",
-          lastLogin: "2023-05-22",
-          watchedCount: 342,
-          ratedCount: 315,
-        },
-        {
-          id: "2",
-          username: "riker",
-          email: "riker@starfleet.org",
-          isAdmin: false,
-          status: "active",
-          createdAt: "2023-02-10",
-          lastLogin: "2023-05-21",
-          watchedCount: 256,
-          ratedCount: 230,
-        },
-        {
-          id: "3",
-          username: "data",
-          email: "data@starfleet.org",
-          isAdmin: false,
-          status: "active",
-          createdAt: "2023-03-05",
-          lastLogin: "2023-05-20",
-          watchedCount: 695,
-          ratedCount: 695,
-        },
-      ])
-    }, 1000)
-  }, [])
+  // no mock users; use activity table fed by /api/statistics
 
   return (
     <main className="min-h-screen">
       <LcarsHeader title="Statistical Analysis" />
       <div className="container mx-auto px-4 py-8">
-        <StatisticsFilters filters={filters} setFilters={setFilters} />
-
         <StatisticsSummary filters={filters} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        <div className="grid grid-cols-1 gap-6 mt-8">
           <Card className="lcars-panel">
             <CardHeader>
-              <CardTitle>Rating Distribution</CardTitle>
+              <CardTitle>Rating Distribution (0–10 by 0.1)</CardTitle>
             </CardHeader>
             <CardContent>
               <RatingDistributionChart filters={filters} />
-            </CardContent>
-          </Card>
-
-          <Card className="lcars-panel">
-            <CardHeader>
-              <CardTitle>Watch Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <WatchProgressChart filters={filters} />
             </CardContent>
           </Card>
         </div>
@@ -101,7 +47,7 @@ export default function StatisticsPage() {
 
           <Card className="lcars-panel">
             <CardHeader>
-              <CardTitle>Rating Trends Over Time</CardTitle>
+              <CardTitle>Rating Trends by Chronological Order</CardTitle>
             </CardHeader>
             <CardContent>
               <RatingTrendChart filters={filters} />
@@ -111,10 +57,10 @@ export default function StatisticsPage() {
         <div className="mt-6">
           <Card className="lcars-panel">
             <CardHeader>
-              <CardTitle>User Statistics</CardTitle>
+              <CardTitle>User Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <AdminUserStats users={activeUsers} />
+              <ActivityTable filters={filters} />
             </CardContent>
           </Card>
         </div>

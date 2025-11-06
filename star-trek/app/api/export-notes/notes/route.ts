@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { query } from "@/lib/db"
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
@@ -14,36 +14,48 @@ export async function POST(req: Request) {
   if (!Array.isArray(selectedIds) || selectedIds.length === 0) {
     return NextResponse.json({ notes: [] })
   }
+  // Fetch notes with joins and filter by selected content and optional user
+  const params: any[] = []
+  let idx = 1
+  const userFilter = includeOthers ? "" : `n.user_id = $${idx++}`
+  if (!includeOthers) params.push(userId)
+  params.push(selectedIds)
+  const selectedFilter = `(
+    n.show_id = ANY($${idx}::uuid[]) OR
+    n.season_id = ANY($${idx}::uuid[]) OR
+    n.movie_id = ANY($${idx}::uuid[]) OR
+    (ep.id IS NOT NULL AND (s.id = ANY($${idx}::uuid[]) OR s.show_id = ANY($${idx}::uuid[])))
+  )`
 
-  const whereUser = includeOthers ? {} : { userId }
+  const whereClause = [userFilter, selectedFilter].filter(Boolean).join(" AND ")
 
-  // Build where for selected content, including episodes under selected seasons/shows
-  const whereSelected = {
-    OR: [
-      { showId: { in: selectedIds } },
-      { seasonId: { in: selectedIds } },
-      { movieId: { in: selectedIds } },
-      { episode: { season: { showId: { in: selectedIds } } } },
-      { episode: { seasonId: { in: selectedIds } } },
-    ],
-  }
+  const { rows: notes } = await query<any>(
+    `SELECT n.id, n.content, n.created_at,
+            u.username,
+            -- direct show note context
+            sh.id      AS show_id,   sh.title  AS show_title,   sh."order" AS show_order,
+            -- direct season note context
+            se.id      AS season_id, se.number AS season_number, sh2.title  AS season_show_title, sh2."order" AS season_show_order,
+            -- episode note context with its season's show
+            ep.id      AS episode_id, ep.title AS episode_title, ep.episode_number,
+            s.number   AS ep_season_number, sh3.title AS ep_show_title, sh3."order" AS ep_show_order,
+            -- movie note context
+            mv.id      AS movie_id, mv.title   AS movie_title, mv."order" AS movie_order
+     FROM notes n
+     LEFT JOIN users u ON n.user_id = u.id
+     LEFT JOIN shows sh ON n.show_id = sh.id
+     LEFT JOIN seasons se ON n.season_id = se.id
+     LEFT JOIN shows sh2 ON se.show_id = sh2.id
+     LEFT JOIN episodes ep ON n.episode_id = ep.id
+     LEFT JOIN seasons s ON ep.season_id = s.id
+     LEFT JOIN shows sh3 ON s.show_id = sh3.id
+     LEFT JOIN movies mv ON n.movie_id = mv.id
+     WHERE ${whereClause}
+     ORDER BY n.created_at DESC`,
+    params
+  )
 
-  const notes = await prisma.note.findMany({
-    where: { ...whereUser, ...whereSelected },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      content: true,
-      createdAt: true,
-      user: { select: { username: true } },
-      show: { select: { id: true, title: true, order: true } },
-      season: { select: { id: true, number: true, show: { select: { id: true, title: true, order: true } } } },
-      episode: { select: { id: true, title: true, episodeNumber: true, season: { select: { number: true, show: { select: { id: true, title: true, order: true } } } } } },
-      movie: { select: { id: true, title: true, order: true } },
-    },
-  })
-
-  const mapped = notes.map((n) => {
+  const mapped = notes.map((n: any) => {
     let contentId = ""
     let contentType = ""
     let contentTitle = ""
@@ -54,57 +66,60 @@ export async function POST(req: Request) {
       episodeNum: 0,
       movieOrder: 9999,
     }
-    if (n.episode) {
-      contentId = n.episode.id
+    if (n.episode_id) {
+      contentId = n.episode_id
       contentType = "episode"
-      contentTitle = `${n.episode.season.show.title} S${n.episode.season.number}: ${n.episode.title}`
+      const showTitle = n.ep_show_title ?? n.season_show_title ?? n.show_title ?? ""
+      const seasonNum = n.ep_season_number ?? n.season_number ?? ""
+      const episodeNum = n.episode_number ?? ""
+      contentTitle = `${showTitle} S${seasonNum}E${episodeNum}: ${n.episode_title}`.trim()
       sort = {
         typeRank: 0,
-        showOrder: n.episode.season.show.order ?? 9999,
-        seasonNum: n.episode.season.number,
-        episodeNum: n.episode.episodeNumber,
+        showOrder: (n.ep_show_order ?? n.season_show_order ?? n.show_order ?? 9999),
+        seasonNum: seasonNum || 0,
+        episodeNum: n.episode_number,
         movieOrder: 9999,
       }
-    } else if (n.season) {
-      contentId = n.season.id
+    } else if (n.season_id) {
+      contentId = n.season_id
       contentType = "season"
-      contentTitle = `${n.season.show.title} S${n.season.number}`
+      contentTitle = `${n.season_show_title} S${n.season_number}`
       sort = {
         typeRank: 0,
-        showOrder: n.season.show.order ?? 9999,
-        seasonNum: n.season.number,
+        showOrder: n.season_show_order ?? 9999,
+        seasonNum: n.season_number,
         episodeNum: 0,
         movieOrder: 9999,
       }
-    } else if (n.show) {
-      contentId = n.show.id
+    } else if (n.show_id) {
+      contentId = n.show_id
       contentType = "show"
-      contentTitle = n.show.title
+      contentTitle = n.show_title
       sort = {
         typeRank: 0,
-        showOrder: n.show.order ?? 9999,
+        showOrder: n.show_order ?? 9999,
         seasonNum: 0,
         episodeNum: 0,
         movieOrder: 9999,
       }
-    } else if (n.movie) {
-      contentId = n.movie.id
+    } else if (n.movie_id) {
+      contentId = n.movie_id
       contentType = "movie"
-      contentTitle = n.movie.title
+      contentTitle = n.movie_title
       sort = {
         typeRank: 1,
         showOrder: 9999,
         seasonNum: 0,
         episodeNum: 0,
-        movieOrder: n.movie.order ?? 9999,
+        movieOrder: n.movie_order ?? 9999,
       }
     }
 
     return {
       id: n.id,
-      username: n.user.username,
+      username: n.username,
       content: n.content,
-      timestamp: n.createdAt.toISOString(),
+      timestamp: new Date(n.created_at).toISOString(),
       contentId,
       contentType,
       contentTitle,

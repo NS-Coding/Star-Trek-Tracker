@@ -9,6 +9,18 @@ from decimal import Decimal
 
 from cinemagoerng import web  # Using CinemagoerNG
 
+# Debugging control
+DEBUG = True
+def dbg(msg):
+    if DEBUG:
+        try:
+            print(msg)
+        except Exception:
+            try:
+                print(str(msg))
+            except Exception:
+                pass
+
 def dump_attrs(obj, label, show_values=False):
     try:
         names = sorted([n for n in dir(obj) if not n.startswith('_')])
@@ -117,11 +129,15 @@ def fetch_show_and_episodes(imdb_id, order, max_seasons=25):
         # Fetch series metadata (try reference, then fallback to main)
         meta = None
         try:
+            dbg(f"[META] fetching reference page for {imdb_id}")
             meta = web.get_title(imdb_id=imdb_id, page="reference")
+            dbg(f"[META] reference fetched type={type(meta)} title={getattr(meta,'title',None)} has_imdb_id={hasattr(meta,'imdb_id')}")
         except Exception as e:
             print(f"Error fetching reference page for {imdb_id}: {e}. Falling back to main page...")
             try:
+                dbg(f"[META] fetching main page for {imdb_id}")
                 meta = web.get_title(imdb_id=imdb_id, page="main")
+                dbg(f"[META] main fetched type={type(meta)} title={getattr(meta,'title',None)} has_imdb_id={hasattr(meta,'imdb_id')}")
             except Exception as e2:
                 print(f"Error fetching main page for {imdb_id}: {e2}")
                 return result
@@ -165,18 +181,25 @@ def fetch_show_and_episodes(imdb_id, order, max_seasons=25):
         # Seasons and episodes
         for season_number in range(1, max_seasons + 1):
             season_str = str(season_number)
+            dbg(f"[SEASON] fetching episodes page imdb_id={imdb_id} season={season_str}")
             series = web.get_title(imdb_id=imdb_id, page="episodes", season=season_str)
+            dbg(f"[SEASON] fetched type={type(series)} has_attr_episodes={hasattr(series,'episodes')}")
             if not hasattr(series, 'episodes') or season_str not in series.episodes or not series.episodes[season_str]:
                 print(f"[SEASON] {title} S{season_number:02}: no episodes found; stopping.")
                 break
 
             episodes_for_season = series.episodes[season_str]
+            try:
+                dbg(f"[SEASON] {title} S{season_number:02}: episodes_count={len(episodes_for_season)} keys_sample={(list(episodes_for_season.keys())[:3])}")
+            except Exception:
+                pass
             # Minimal logging only
             # print(f"[SEASON] {title} S{season_number:02}: episode_count={len(episodes_for_season)}")
             # Determine default per-episode runtime from series meta if available
             default_ep_runtime = None
             try:
                 default_ep_runtime = normalize_runtime(getattr(meta, 'runtime', None))
+                dbg(f"[SEASON] default_ep_runtime={default_ep_runtime}")
             except Exception:
                 default_ep_runtime = None
             season_data = {'number': season_number, 'imdbRating': None, 'episodes': [], 'runtime': None}
@@ -215,7 +238,9 @@ def fetch_show_and_episodes(imdb_id, order, max_seasons=25):
                 # If not found, try fetching episode details page (silent on errors)
                 if ep_runtime is None and hasattr(ep, 'imdb_id') and getattr(ep, 'imdb_id'):
                     try:
-                        ep_full = web.get_title(imdb_id=getattr(ep, 'imdb_id'))
+                        ep_full_id = getattr(ep, 'imdb_id')
+                        dbg(f"[EP] fetch details imdb_id={ep_full_id} for S{season_number:02}E{getattr(ep,'episode', '')}")
+                        ep_full = web.get_title(imdb_id=ep_full_id)
                         for attr in ('running_time', 'runtime', 'runtimes', 'runtime_minutes', 'duration'):
                             if hasattr(ep_full, attr):
                                 ep_runtime = normalize_runtime(getattr(ep_full, attr))
@@ -229,6 +254,10 @@ def fetch_show_and_episodes(imdb_id, order, max_seasons=25):
                 if ep_runtime:
                     season_total_runtime += ep_runtime
                     season_has_runtime = True
+                try:
+                    dbg(f"[EP] S{season_number:02}E{getattr(ep,'episode', '')}: title={ep_title} rating={ep_rating} runtime={ep_runtime} air_date={air_date} has_imdb_id={hasattr(ep,'imdb_id')}")
+                except Exception:
+                    pass
                 # Minimal logging only
 
                 episode_data = {

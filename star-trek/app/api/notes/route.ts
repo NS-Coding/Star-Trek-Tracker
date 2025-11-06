@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { query } from '@/lib/db'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -15,31 +15,24 @@ export async function GET(request: Request) {
 
   try {
     // Find field name based on content type
-    const fieldName = `${contentType}Id`
-    
-    // Query notes for the specified content
-    const notes = await prisma.note.findMany({
-      where: {
-        [fieldName]: contentId
-      },
-      include: {
-        user: {
-          select: {
-            username: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
+    const fieldName = `${contentType}_id`
+
+    const { rows: notes } = await query<{ id: string; content: string; created_at: string; username: string; user_id: string }>(
+      `SELECT n.id, n.content, n.created_at, u.username, n.user_id
+       FROM notes n
+       JOIN users u ON n.user_id = u.id
+       WHERE n.${fieldName} = $1
+       ORDER BY n.created_at DESC`,
+      [contentId]
+    )
 
     return NextResponse.json({
-      notes: notes.map(note => ({
+      notes: notes.map((note) => ({
         id: note.id,
-        username: note.user.username,
+        userId: note.user_id,
+        username: note.username,
         content: note.content,
-        timestamp: note.createdAt.toISOString()
+        timestamp: new Date(note.created_at).toISOString(),
       }))
     })
   } catch (error) {
@@ -64,23 +57,23 @@ export async function POST(request: Request) {
 
     // Determine which field to use based on content type
     const data: any = {
-      userId,
+      user_id: userId,
       content
     }
 
     // Set the appropriate content ID field
     switch (contentType) {
       case 'show':
-        data.showId = contentId
+        data.show_id = contentId
         break
       case 'movie':
-        data.movieId = contentId
+        data.movie_id = contentId
         break
       case 'season':
-        data.seasonId = contentId
+        data.season_id = contentId
         break
       case 'episode':
-        data.episodeId = contentId
+        data.episode_id = contentId
         break
       default:
         return NextResponse.json(
@@ -90,30 +83,28 @@ export async function POST(request: Request) {
     }
 
     // Check if note already exists
-    const fieldName = `${contentType}Id`
-    const existingNote = await prisma.note.findFirst({
-      where: {
-        userId,
-        [fieldName]: contentId
-      }
-    })
+    const fieldName = `${contentType}_id`
+    const { rows: existing } = await query<{ id: string }>(
+      `SELECT id FROM notes WHERE user_id = $1 AND ${fieldName} = $2 LIMIT 1`,
+      [userId, contentId]
+    )
 
-    let result
-
-    if (existingNote) {
-      // Update existing note
-      result = await prisma.note.update({
-        where: { id: existingNote.id },
-        data: { content }
-      })
+    if (existing.length) {
+      const { rows } = await query(
+        `UPDATE notes SET content = $1, updated_at = now() WHERE id = $2 RETURNING id, content, updated_at`,
+        [content, existing[0].id]
+      )
+      return NextResponse.json(rows[0])
     } else {
-      // Create new note
-      result = await prisma.note.create({
-        data
-      })
+      const columns = Object.keys(data)
+      const values = Object.values(data)
+      const placeholders = values.map((_, i) => `$${i + 1}`).join(', ')
+      const { rows } = await query(
+        `INSERT INTO notes (${columns.join(', ')}) VALUES (${placeholders}) RETURNING id, content, created_at`,
+        values
+      )
+      return NextResponse.json(rows[0])
     }
-
-    return NextResponse.json(result)
   } catch (error) {
     console.error('Error saving note:', error)
     return NextResponse.json(

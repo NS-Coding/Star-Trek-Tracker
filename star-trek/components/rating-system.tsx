@@ -18,18 +18,26 @@ interface RatingSystemProps {
 
 export function RatingSystem({ contentId, contentType, initialRating }: RatingSystemProps) {
   // Ensure we always work with a valid number
-  const numericInitial = typeof initialRating === "number" && !isNaN(initialRating) ? initialRating : 0
+  const normalizeInitial = (val: number | undefined) => {
+    const numeric = typeof val === "number" && !isNaN(val) ? val : 0
+    // Convert initial rating to 10-point scale if it was previously on 5-point scale
+    return numeric > 0 && numeric <= 5 ? numeric * 2 : numeric
+  }
 
-  // Convert initial rating to 10-point scale if it was previously on 5-point scale
-  const adjustedInitialRating = numericInitial > 0 && numericInitial <= 5 ? numericInitial * 2 : numericInitial
-
-  const [rating, setRating] = useState<number>(adjustedInitialRating)
-  const [inputRating, setInputRating] = useState(adjustedInitialRating.toString())
+  const [rating, setRating] = useState<number>(normalizeInitial(initialRating))
+  const [inputRating, setInputRating] = useState(normalizeInitial(initialRating).toString())
   const [hoveredRating, setHoveredRating] = useState(0)
   const [userRatings, setUserRatings] = useState<{ username: string; rating: number; date: string }[]>([])
   const [averageRating, setAverageRating] = useState(0)
 
   const { data: session } = useSession()
+
+  // Sync when initialRating prop changes (e.g., after fetching user's saved rating)
+  useEffect(() => {
+    const next = normalizeInitial(initialRating)
+    setRating(next)
+    setInputRating(next.toString())
+  }, [initialRating])
 
   useEffect(() => {
     const fetchRatings = async () => {
@@ -42,7 +50,17 @@ export function RatingSystem({ contentId, contentType, initialRating }: RatingSy
         
         const data = await response.json()
         setUserRatings(data.ratings || [])
-        setAverageRating(data.averageRating || 0)
+        setAverageRating(typeof data.averageRating === 'number' ? data.averageRating : 0)
+
+        // If no initial/user-prop rating yet, hydrate from the current user's saved rating in the list
+        if (session?.user?.id && (!initialRating || initialRating === 0)) {
+          const mine = (data.ratings || []).find((r: any) => r.userId === session.user.id)
+          if (mine && typeof mine.rating === 'number') {
+            const val = mine.rating
+            setRating(val)
+            setInputRating(val.toFixed(1))
+          }
+        }
       } catch (error) {
         console.error('Error fetching ratings:', error)
       }
@@ -51,7 +69,7 @@ export function RatingSystem({ contentId, contentType, initialRating }: RatingSy
     if (contentId && contentType) {
       fetchRatings()
     }
-  }, [contentId, contentType])
+  }, [contentId, contentType, session?.user?.id, session?.user?.username, initialRating])
 
   const handleStarClick = (value: number) => {
     // Convert 5-star scale to 10-point scale

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceArea, ReferenceDot, ReferenceLine } from "recharts"
 
 interface RatingTrendChartProps {
   filters: {
@@ -18,46 +18,63 @@ interface TrendData {
 }
 
 export function RatingTrendChart({ filters }: RatingTrendChartProps) {
-  const [data, setData] = useState<TrendData[]>([])
+  const [data, setData] = useState<{ order: number; rating: number; title?: string; isMovie?: boolean }[]>([])
+  const [bands, setBands] = useState<{ title: string; start: number; end: number }[]>([])
+  const [movieOrders, setMovieOrders] = useState<number[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Mock data fetch - would be replaced with actual API call
-    setTimeout(() => {
-      setData([
-        { date: "2023-01", rating: 7.8, episodes: 5 },
-        { date: "2023-02", rating: 8.2, episodes: 8 },
-        { date: "2023-03", rating: 8.5, episodes: 10 },
-        { date: "2023-04", rating: 8.1, episodes: 7 },
-        { date: "2023-05", rating: 9.0, episodes: 12 },
-        { date: "2023-06", rating: 8.7, episodes: 9 },
-        { date: "2023-07", rating: 8.9, episodes: 11 },
-        { date: "2023-08", rating: 9.2, episodes: 15 },
-        { date: "2023-09", rating: 8.8, episodes: 10 },
-        { date: "2023-10", rating: 9.1, episodes: 13 },
-        { date: "2023-11", rating: 9.3, episodes: 14 },
-        { date: "2023-12", rating: 9.0, episodes: 12 },
-      ])
-      setLoading(false)
-    }, 500)
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const scope = (() => {
+          if (filters.series === 'movies') return 'movies'
+          if (filters.series === 'all') return 'all'
+          return filters.series.startsWith('show:') ? filters.series : 'series'
+        })()
+        const users = (() => {
+          const nonCurrent = filters.users.filter(u => u !== 'current')
+          if (nonCurrent.length > 0) return 'all'
+          return ['current']
+        })()
+        const res = await fetch('/api/statistics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scope, timeRange: filters.timeRange || 'all', users }),
+        })
+        if (!res.ok) throw new Error('Failed to load statistics')
+        const json = await res.json()
+        const trend = Array.isArray(json.trend) ? json.trend : []
+        if (!cancelled) {
+          setData(trend)
+          setBands(Array.isArray(json.seriesBands) ? json.seriesBands : [])
+          setMovieOrders(Array.isArray(json.movieOrders) ? json.movieOrders : [])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
   }, [filters])
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading chart data...</div>
   }
 
-  // Format dates for display
-  const formattedData = data.map((item) => ({
-    ...item,
-    formattedDate: new Date(item.date).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
-  }))
+  // Use order buckets for X axis
+  const formattedData = data.map((d) => ({ order: d.order, rating: d.rating, title: d.title, isMovie: d.isMovie }))
 
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={formattedData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-          <XAxis dataKey="formattedDate" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+          {bands.map((b, i) => (
+            <ReferenceArea key={`${b.title}-${i}`} x1={b.start} x2={b.end} y1={0} y2={10} fill={i % 2 === 0 ? "#0f172a" : "#111827"} fillOpacity={0.35} />
+          ))}
+          <XAxis dataKey="order" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
           <YAxis
             domain={[0, 10]}
             stroke="#888888"
@@ -69,13 +86,13 @@ export function RatingTrendChart({ filters }: RatingTrendChartProps) {
           <Tooltip
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
-                const data = payload[0].payload
+                const p = payload[0].payload as any
                 return (
                   <div className="rounded-lg border bg-black p-2 shadow-sm">
                     <div className="grid gap-1">
-                      <div className="font-bold">{data.formattedDate}</div>
-                      <div>Average Rating: {data.rating.toFixed(1)}</div>
-                      <div>Episodes Watched: {data.episodes}</div>
+                      <div className="font-bold">{p.title || `Order ${p.order}`}</div>
+                      <div className="text-xs text-gray-400">Order: {p.order}</div>
+                      <div>Average Rating: {p.rating.toFixed(1)}</div>
                     </div>
                   </div>
                 )
@@ -83,7 +100,32 @@ export function RatingTrendChart({ filters }: RatingTrendChartProps) {
               return null
             }}
           />
-          <Area type="monotone" dataKey="rating" stroke="#f97316" fill="url(#colorRating)" strokeWidth={2} />
+          <Area
+            type="monotone"
+            dataKey="rating"
+            stroke="#f97316"
+            fill="url(#colorRating)"
+            strokeWidth={2}
+            dot={(props: any) => {
+              const { cx, cy, payload } = props
+              const isMovie = payload?.isMovie
+              return (
+                <circle cx={cx} cy={cy} r={isMovie ? 4 : 0} fill="transparent" stroke="#ffffff" strokeWidth={1.5} />
+              )
+            }}
+          />
+          {bands.map((b, i) => (
+            <ReferenceLine key={`line-start-${b.title}-${i}`} x={b.start} stroke="#9ca3af" strokeWidth={1.25} strokeDasharray="3 3" ifOverflow="visible" />
+          ))}
+          {bands.map((b, i) => (
+            <ReferenceLine key={`line-end-${b.title}-${i}`} x={b.end} stroke="#9ca3af" strokeWidth={1.25} strokeDasharray="3 3" ifOverflow="visible" />
+          ))}
+          {movieOrders.map((ord, idx) => (
+            <ReferenceDot key={`mv-${idx}`} x={ord} y={10} r={5} fill="transparent" stroke="#ffffff" strokeWidth={1.25} />
+          ))}
+          {movieOrders.map((ord, idx) => (
+            <ReferenceLine key={`mv-line-${idx}`} x={ord} stroke="#666" strokeDasharray="4 2" ifOverflow="visible" />
+          ))}
           <defs>
             <linearGradient id="colorRating" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />

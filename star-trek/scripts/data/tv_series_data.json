@@ -762,7 +762,7 @@
     "seasons": [
       {
         "number": 1,
-        "imdbRating": 6.625,
+        "imdbRating": 6.63125,
         "episodes": [
           {
             "title": "Beyond the Farthest Star",
@@ -778,7 +778,7 @@
             "episodeNumber": "2",
             "airDate": "1973-09-15",
             "artworkUrl": null,
-            "imdbRating": 8.0,
+            "imdbRating": 8.1,
             "description": "After finding himself erased from recent history, Spock must travel back in time to save himself as a youth.",
             "runtime": 30
           },
@@ -985,7 +985,7 @@
     "seasons": [
       {
         "number": 1,
-        "imdbRating": 6.747999999999999,
+        "imdbRating": 6.744,
         "episodes": [
           {
             "title": "Encounter at Farpoint",
@@ -1091,7 +1091,7 @@
             "episodeNumber": "12",
             "airDate": "1988-01-16",
             "artworkUrl": null,
-            "imdbRating": 7.6,
+            "imdbRating": 7.5,
             "description": "The Enterprise visits the planet where Data was created and discovers another android like him, but when he&#39;s assembled, he&#39;s not exactly like him.",
             "runtime": 45
           },
@@ -1217,7 +1217,7 @@
       },
       {
         "number": 2,
-        "imdbRating": 6.868181818181818,
+        "imdbRating": 6.872727272727272,
         "episodes": [
           {
             "title": "The Child",
@@ -1314,7 +1314,7 @@
             "episodeNumber": "11",
             "airDate": "1989-03-18",
             "artworkUrl": null,
-            "imdbRating": 7.5,
+            "imdbRating": 7.6,
             "description": "Encountering the superior technology of a very ancient race creates system malfunctions for a doomed Federation starship, for the Enterprise, and for an eavesdropping Romulan warbird.",
             "runtime": 45
           },
@@ -2243,7 +2243,7 @@
             "airDate": "1992-12-19",
             "artworkUrl": null,
             "imdbRating": 8.9,
-            "description": "While the humorless Captain Jellico leads the effort to prevent a Cardassian invasion, Picard is captured and tortured by a ruthless interrogator in an attempt to break him.",
+            "description": "While the humorless Captain Jellico leads the endeavor to prevent a Cardassian invasion, Picard is captured and tortured by a ruthless interrogator in an attempt to break him.",
             "runtime": 45
           },
           {
@@ -4238,7 +4238,7 @@
   {
     "show": {
       "title": "Star Trek: Voyager",
-      "description": "Pulled to the far side of the galaxy, where the Federation is seventy-five years away at maximum warp speed, a Starfleet ship must cooperate with Maquis rebels to find a way home.",
+      "description": "Pulled to the far side of the galaxy, where the Federation is seventy-five years away at maximum warp speed, the crew of the Starfleet star-ship Voyager must forge a truce with a group of Maquis rebels in order to find a way home.",
       "order": 12,
       "artworkUrl": "/images/series_tt0112178.jpg",
       "imdbRating": 7.9
@@ -5387,7 +5387,7 @@
             "airDate": "1999-10-20",
             "artworkUrl": null,
             "imdbRating": 6.3,
-            "description": "Voyager takes on a &quot;haunted&quot; hot rod alien spacecraft with a possessiveness artificial intelligence that jealously bonds with Tom Paris.",
+            "description": "Voyager takes on a &quot;haunted&quot; hot rod alien spacecraft with a possessive artificial intelligence that jealously bonds with Tom Paris.",
             "runtime": 44
           },
           {
@@ -5584,7 +5584,7 @@
       },
       {
         "number": 7,
-        "imdbRating": 7.466666666666666,
+        "imdbRating": 7.470833333333334,
         "episodes": [
           {
             "title": "Unimatrix Zero Part II",
@@ -5699,7 +5699,7 @@
             "episodeNumber": "13",
             "airDate": "2001-02-07",
             "artworkUrl": null,
-            "imdbRating": 7.1,
+            "imdbRating": 7.2,
             "description": "Voyager finds a multi-generational Klingon ship that left the Alpha Quadrant more than 100 years before. When they hear of B&#39;Elanna&#39;s child, they claim it as their savior.",
             "runtime": 44
           },
@@ -7138,7 +7138,7 @@
       },
       {
         "number": 4,
-        "imdbRating": 5.800000000000001,
+        "imdbRating": 5.792307692307692,
         "episodes": [
           {
             "title": "Kobayashi Maru",
@@ -7181,7 +7181,7 @@
             "episodeNumber": "5",
             "airDate": "2021-12-16",
             "artworkUrl": null,
-            "imdbRating": 6.1,
+            "imdbRating": 6.0,
             "description": "Burnham and Book race to evacuate a group of stranded colonists in the anomaly&#39;s path as one of the Federation&#39;s brightest scientists comes aboard the U.S.S. Discovery to do high-stakes research with Saru and Stamets.",
             "runtime": 60
           },
@@ -7262,7 +7262,7 @@
       },
       {
         "number": 5,
-        "imdbRating": 6.2700000000000005,
+        "imdbRating": 6.279999999999999,
         "episodes": [
           {
             "title": "Red Directive",
@@ -7341,7 +7341,7 @@
             "episodeNumber": "9",
             "airDate": "2024-05-23",
             "artworkUrl": null,
-            "imdbRating": 6.4,
+            "imdbRating": 6.5,
             "description": "After Moll and the Breen capture a mysterious structure that contains the Progenitors&#39; power, Captain Burnham must lead a covert mission to retrieve it before the Breen figure out how to use it.",
             "runtime": 60
           },
@@ -8078,7 +8078,7 @@
       },
       {
         "number": 4,
-        "imdbRating": 7.840000000000001,
+        "imdbRating": 7.83,
         "episodes": [
           {
             "title": "Twovix",
@@ -8112,7 +8112,7 @@
             "episodeNumber": "4",
             "airDate": "2023-09-21",
             "artworkUrl": null,
-            "imdbRating": 7.8,
+            "imdbRating": 7.7,
             "description": "Tendi is summoned back to Orion for a wedding.",
             "runtime": 25
           },
@@ -8175,7 +8175,7 @@
       },
       {
         "number": 5,
-        "imdbRating": 7.83,
+        "imdbRating": 7.82,
         "episodes": [
           {
             "title": "Dos Cerritos",
@@ -8254,7 +8254,7 @@
             "episodeNumber": "9",
             "airDate": "2024-12-12",
             "artworkUrl": null,
-            "imdbRating": 9.0,
+            "imdbRating": 8.9,
             "description": "Fissures must be closed before they get inflamed.",
             "runtime": 25
           },
@@ -8283,7 +8283,7 @@
     "seasons": [
       {
         "number": 1,
-        "imdbRating": 7.81,
+        "imdbRating": 7.805,
         "episodes": [
           {
             "title": "Lost & Found, Part 1",
@@ -8380,7 +8380,7 @@
             "episodeNumber": "11",
             "airDate": "2022-10-27",
             "artworkUrl": null,
-            "imdbRating": 7.8,
+            "imdbRating": 7.7,
             "description": "At the edge of Federation space, the crew applies for asylum at a comm relay outpost, only for their starship to reveal its shocking true purpose.",
             "runtime": 24
           },
@@ -8470,14 +8470,14 @@
       },
       {
         "number": 2,
-        "imdbRating": 8.135,
+        "imdbRating": 8.105,
         "episodes": [
           {
             "title": "Into the Breach: Part 1",
             "episodeNumber": "1",
             "airDate": "2024-07-01",
             "artworkUrl": null,
-            "imdbRating": 7.8,
+            "imdbRating": 7.7,
             "description": "Dal and his friends board Janeway&#39;s starship to investigate the wormhole created by the Protostar. Tired of his training, Dal longs for some action.",
             "runtime": 24
           },
@@ -8504,7 +8504,7 @@
             "episodeNumber": "4",
             "airDate": "2024-07-01",
             "artworkUrl": null,
-            "imdbRating": 8.1,
+            "imdbRating": 8.0,
             "description": "Although separated by decades, the Infinity and the Voyager crews band together to save Gwyn&#39;s life. A mysterious messenger reaches out to Gwyn.",
             "runtime": 24
           },
@@ -8522,7 +8522,7 @@
             "episodeNumber": "6",
             "airDate": "2024-07-01",
             "artworkUrl": null,
-            "imdbRating": 7.7,
+            "imdbRating": 7.6,
             "description": "Hoping to hijack the Infinity before its scheduled destruction, Dal and the crew create hologram doubles to cover for their absence.",
             "runtime": 24
           },
@@ -8576,7 +8576,7 @@
             "episodeNumber": "12",
             "airDate": "2024-07-01",
             "artworkUrl": null,
-            "imdbRating": 8.3,
+            "imdbRating": 8.2,
             "description": "Chakotay and the cadets devise a bold but perilous plan to relaunch the Protostar. Before the ship can fly, however, it will first have to sail.",
             "runtime": 24
           },
@@ -8585,7 +8585,7 @@
             "episodeNumber": "13",
             "airDate": "2024-07-01",
             "artworkUrl": null,
-            "imdbRating": 7.6,
+            "imdbRating": 7.5,
             "description": "While harvesting bosonite on a barren world, the crew encounters aggressive, genetically-modified tribbles - and the Klingon scientist who created them.",
             "runtime": 24
           },
@@ -8621,7 +8621,7 @@
             "episodeNumber": "17",
             "airDate": "2024-07-01",
             "artworkUrl": null,
-            "imdbRating": 8.2,
+            "imdbRating": 8.1,
             "description": "As war looms between the Federation and Solum, Gwyn proposes to lead the cadets on an undercover mission to gather intelligence and rescue Ilthuran.",
             "runtime": 24
           },
@@ -8862,14 +8862,14 @@
       },
       {
         "number": 3,
-        "imdbRating": 7.1125,
+        "imdbRating": 7.109999999999999,
         "episodes": [
           {
             "title": "Hegemony, Part II",
             "episodeNumber": "1",
             "airDate": "2025-07-17",
             "artworkUrl": null,
-            "imdbRating": 7.8,
+            "imdbRating": 7.7,
             "description": "Pike risks it all, taking the Enterprise on a daring rescue mission behind enemy lines, while the landing party attempts an escape from a deadly enemy.",
             "runtime": 52
           },
@@ -8887,7 +8887,7 @@
             "episodeNumber": "3",
             "airDate": "2025-07-24",
             "artworkUrl": null,
-            "imdbRating": 7.1,
+            "imdbRating": 7.0,
             "description": "In order to cure Batel, Pike and M&#39;Benga travel to Klingon space, where M&#39;Benga&#39;s past resurfaces on a dangerous planet.",
             "runtime": 52
           },
@@ -8896,7 +8896,7 @@
             "episodeNumber": "4",
             "airDate": "2025-07-31",
             "artworkUrl": null,
-            "imdbRating": 6.5,
+            "imdbRating": 6.4,
             "description": "When La&#39;An tests a prototype holodeck with a fictional case only she can solve, the consequences of failure get greater and greater, with the Enterprise hanging in the balance.",
             "runtime": 52
           },
@@ -8914,7 +8914,7 @@
             "episodeNumber": "6",
             "airDate": "2025-08-14",
             "artworkUrl": null,
-            "imdbRating": 8.4,
+            "imdbRating": 8.3,
             "description": "Kirk&#39;s first day as captain turns disastrous when a scavenger ship seizes the Enterprise.",
             "runtime": 52
           },
@@ -8923,7 +8923,7 @@
             "episodeNumber": "7",
             "airDate": "2025-08-21",
             "artworkUrl": null,
-            "imdbRating": 6.3,
+            "imdbRating": 6.2,
             "description": "While aiding a war-torn planet, Pike and crew face scrutiny from a probing journalist.",
             "runtime": 52
           },
@@ -8941,8 +8941,8 @@
             "episodeNumber": "9",
             "airDate": "2025-09-04",
             "artworkUrl": null,
-            "imdbRating": null,
-            "description": "",
+            "imdbRating": 7.6,
+            "description": "Stranded on a toxic moon, Ortegas must defy her deepest beliefs to survive.",
             "runtime": 52
           },
           {
@@ -8950,8 +8950,8 @@
             "episodeNumber": "10",
             "airDate": "2025-09-11",
             "artworkUrl": null,
-            "imdbRating": null,
-            "description": "",
+            "imdbRating": 7.1,
+            "description": "When an ancient evil resurfaces, Pike faces a life-altering choice to stop it.",
             "runtime": 52
           }
         ],

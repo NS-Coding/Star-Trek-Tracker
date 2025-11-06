@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { query } from '@/lib/db'
 
 export async function POST(request: Request) {
   try {
@@ -12,24 +12,22 @@ export async function POST(request: Request) {
       )
     }
 
-    // Determine which field to use based on content type
-    const data: any = {
-      watched
-    }
+    // Determine which field to use based on content type (exclude 'watched' here to avoid duplicate column in INSERT)
+    const data: any = {}
 
     // Set the appropriate content ID field
     switch (contentType) {
       case 'show':
-        data.showId = contentId
+        data.show_id = contentId
         break
       case 'movie':
-        data.movieId = contentId
+        data.movie_id = contentId
         break
       case 'season':
-        data.seasonId = contentId
+        data.season_id = contentId
         break
       case 'episode':
-        data.episodeId = contentId
+        data.episode_id = contentId
         break
       default:
         return NextResponse.json(
@@ -39,32 +37,38 @@ export async function POST(request: Request) {
     }
 
     // Check if watch status already exists
-    const fieldName = `${contentType}Id`
-    const existingStatus = await prisma.watchProgress.findFirst({
-      where: {
-        [fieldName]: contentId
-      }
-    })
+    const fieldName = `${contentType}_id`
+    const { rows: existingRows } = await query<{ id: string }>(
+      `SELECT id FROM watch_progress WHERE ${fieldName} = $1 LIMIT 1`,
+      [contentId]
+    )
+    const existingStatus = existingRows[0]
 
     let result
 
     if (watched === false) {
       // Unwatching: remove existing status to clear watch date
       if (existingStatus) {
-        await prisma.watchProgress.delete({ where: { id: existingStatus.id } })
+        await query(`DELETE FROM watch_progress WHERE id = $1`, [existingStatus.id])
       }
       result = { success: true, watched: false }
     } else {
       // Watching: ensure a record exists and set date to now
       if (existingStatus) {
-        result = await prisma.watchProgress.update({
-          where: { id: existingStatus.id },
-          data: { watched: true, createdAt: new Date() },
-        })
+        const { rows } = await query(
+          `UPDATE watch_progress SET watched = true, updated_at = now() WHERE id = $1 RETURNING id, watched, updated_at`,
+          [existingStatus.id]
+        )
+        result = rows[0]
       } else {
-        result = await prisma.watchProgress.create({
-          data: { ...data, watched: true }
-        })
+        const columns = Object.keys(data).concat(['watched'])
+        const values = Object.values(data).concat([true])
+        const placeholders = values.map((_, i) => `$${i + 1}`).join(', ')
+        const { rows } = await query(
+          `INSERT INTO watch_progress (${columns.join(', ')}) VALUES (${placeholders}) RETURNING id, watched, created_at`,
+          values
+        )
+        result = rows[0]
       }
     }
 

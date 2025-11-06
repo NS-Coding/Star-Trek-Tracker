@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
 import { getAuthSession } from "@/lib/auth"
+import { query } from "@/lib/db"
 
 type ActionBody = {
   userId: string
@@ -14,31 +14,25 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const users = await prisma.user.findMany({
-    include: {
-      _count: {
-        select: { ratings: true },
-      },
-    },
-    orderBy: { createdAt: "asc" },
-  })
-
-  const data = await Promise.all(
-    users.map(async (u) => {
-      // Watched count placeholder (0) – depends on future schema relation
-      const watchedCount = 0
-      return {
-        id: u.id,
-        username: u.username,
-        email: u.email,
-        isAdmin: u.isAdmin,
-        isApproved: u.isApproved,
-        createdAt: u.createdAt.toISOString().split("T")[0],
-        ratedCount: u._count.ratings,
-        watchedCount,
-      }
-    })
+  const { rows } = await query<{
+    id: string; username: string; email: string; is_admin: boolean; is_approved: boolean; created_at: string; ratings_count: string
+  }>(
+    `SELECT u.id, u.username, u.email, u.is_admin, u.is_approved, u.created_at,
+            (SELECT COUNT(*)::text FROM ratings r WHERE r.user_id = u.id) AS ratings_count
+     FROM users u
+     ORDER BY u.created_at ASC`
   )
+
+  const data = rows.map((u) => ({
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    isAdmin: u.is_admin,
+    isApproved: u.is_approved,
+    createdAt: new Date(u.created_at).toISOString().split("T")[0],
+    ratedCount: parseInt(u.ratings_count, 10),
+    watchedCount: 0,
+  }))
 
   return NextResponse.json(data)
 }
@@ -59,18 +53,18 @@ export async function PATCH(req: Request) {
     let updated
     switch (action) {
       case "approve":
-        updated = await prisma.user.update({ where: { id: userId }, data: { isApproved: true } })
+        updated = await query(`UPDATE users SET is_approved = true, updated_at = now() WHERE id = $1 RETURNING id, username, email, is_admin, is_approved, created_at`, [userId])
         break
       case "reject":
-        updated = await prisma.user.update({ where: { id: userId }, data: { isApproved: false } })
+        updated = await query(`UPDATE users SET is_approved = false, updated_at = now() WHERE id = $1 RETURNING id, username, email, is_admin, is_approved, created_at`, [userId])
         break
       case "toggleAdmin":
-        updated = await prisma.user.update({ where: { id: userId }, data: { isAdmin: body.makeAdmin ?? false } })
+        updated = await query(`UPDATE users SET is_admin = $2, updated_at = now() WHERE id = $1 RETURNING id, username, email, is_admin, is_approved, created_at`, [userId, body.makeAdmin ?? false])
         break
       default:
         return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
-    return NextResponse.json({ success: true, user: updated })
+    return NextResponse.json({ success: true, user: updated.rows[0] })
   } catch (e) {
     console.error(e)
     return NextResponse.json({ error: "Failed" }, { status: 500 })

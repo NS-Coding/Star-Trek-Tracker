@@ -98,7 +98,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mt-6 space-y-2">
-                  <Button className="lcars-button w-full">
+                  <Button className="lcars-button w-full" onClick={() => router.push("/export-notes") }>
                     <Download className="h-4 w-4 mr-2" />
                     Export My Data
                   </Button>

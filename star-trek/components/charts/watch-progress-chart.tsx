@@ -23,17 +23,42 @@ export function WatchProgressChart({ filters }: WatchProgressChartProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Mock data fetch - would be replaced with actual API call
-    setTimeout(() => {
-      setData([
-        { series: "TOS", total: 79, watched: 79, color: "#f97316" },
-        { series: "TNG", total: 178, watched: 120, color: "#3b82f6" },
-        { series: "DS9", total: 176, watched: 80, color: "#a855f7" },
-        { series: "VOY", total: 172, watched: 50, color: "#ec4899" },
-        { series: "ENT", total: 98, watched: 30, color: "#14b8a6" },
-      ])
-      setLoading(false)
-    }, 500)
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const scope = (() => {
+          if (filters.series === 'movies') return 'movies'
+          if (filters.series === 'all') return 'all'
+          return filters.series.startsWith('show:') ? filters.series : 'series'
+        })()
+        const users = (() => {
+          const nonCurrent = filters.users.filter(u => u !== 'current')
+          if (nonCurrent.length > 0) return 'all'
+          return ['current']
+        })()
+        const res = await fetch('/api/statistics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scope, timeRange: filters.timeRange || 'all', users }),
+        })
+        if (!res.ok) throw new Error('Failed to load statistics')
+        const json = await res.json()
+        const items = Array.isArray(json.progressBySeries) ? json.progressBySeries : []
+        const colors = ["#f97316", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6", "#22c55e", "#eab308"]
+        const mapped = items.map((it: any, idx: number) => ({
+          series: it.title,
+          total: Number(it.total ?? 0),
+          watched: Number(it.watched ?? 0),
+          color: colors[idx % colors.length],
+        }))
+        if (!cancelled) setData(mapped)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
   }, [filters])
 
   if (loading) {
@@ -50,9 +75,9 @@ export function WatchProgressChart({ filters }: WatchProgressChartProps) {
   }))
 
   return (
-    <div className="h-80 w-full">
+    <div className="h-[480px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <BarChart data={chartData} layout="vertical" margin={{ top: 10, right: 30, left: 60, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={true} vertical={false} />
           <XAxis
             type="number"
@@ -67,10 +92,10 @@ export function WatchProgressChart({ filters }: WatchProgressChartProps) {
             dataKey="name"
             type="category"
             stroke="#888888"
-            fontSize={12}
+            fontSize={13}
             tickLine={false}
             axisLine={false}
-            width={40}
+            width={160}
           />
           <Tooltip
             content={({ active, payload }) => {
@@ -91,7 +116,7 @@ export function WatchProgressChart({ filters }: WatchProgressChartProps) {
               return null
             }}
           />
-          <Bar dataKey="percentage" radius={[0, 4, 4, 0]} barSize={20}>
+          <Bar dataKey="percentage" radius={[0, 4, 4, 0]} barSize={26}>
             {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}

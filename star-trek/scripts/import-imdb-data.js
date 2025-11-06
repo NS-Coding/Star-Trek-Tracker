@@ -1,25 +1,161 @@
-// Import IMDb data using CinemagoerNG
-const { PrismaClient } = require('@prisma/client');
+// Import IMDb data using CinemagoerNG and load into Postgres via node-postgres (pg)
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { execSync } = require('child_process');
+const { Pool } = require('pg');
 
-// Initialize Prisma client
 // Load environment variables from .env file
 require('dotenv').config();
 
-// Use DATABASE_URL from environment or fall back to local development
-const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/startrekdb?schema=public';
+// Initialize pg Pool
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL is not set');
+}
+const pool = new Pool({ connectionString: databaseUrl });
 
-// Initialize Prisma client with the database URL
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: databaseUrl
-    }
+async function query(text, params) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(text, params);
+    return res;
+  } finally {
+    client.release();
   }
-});
+}
+
+// Ensure database schema exists (id as UUIDs)
+async function ensureSchema() {
+  // Enable uuid extension
+  await query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
+
+  // Shows
+  await query(`
+    CREATE TABLE IF NOT EXISTS shows (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      title TEXT UNIQUE NOT NULL,
+      description TEXT,
+      "order" INTEGER,
+      artwork_url TEXT,
+      imdb_rating REAL,
+      runtime INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  // Seasons
+  await query(`
+    CREATE TABLE IF NOT EXISTS seasons (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      number INTEGER NOT NULL,
+      show_id UUID NOT NULL REFERENCES shows(id) ON DELETE CASCADE,
+      imdb_rating REAL,
+      artwork_url TEXT,
+      runtime INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (show_id, number)
+    );
+  `);
+
+  // Episodes
+  await query(`
+    CREATE TABLE IF NOT EXISTS episodes (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      title TEXT NOT NULL,
+      episode_number INTEGER NOT NULL,
+      season_id UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      air_date TIMESTAMPTZ,
+      artwork_url TEXT,
+      imdb_rating REAL,
+      description TEXT,
+      runtime INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (season_id, episode_number)
+    );
+  `);
+
+  // Movies
+  await query(`
+    CREATE TABLE IF NOT EXISTS movies (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      title TEXT UNIQUE NOT NULL,
+      release_date TIMESTAMPTZ,
+      description TEXT,
+      "order" INTEGER,
+      artwork_url TEXT,
+      imdb_rating REAL,
+      runtime INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  // Users (kept minimal for auth code refactor later)
+  await query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      username TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      is_admin BOOLEAN NOT NULL DEFAULT false,
+      is_approved BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  // Ratings
+  await query(`
+    CREATE TABLE IF NOT EXISTS ratings (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      value REAL NOT NULL,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      episode_id UUID REFERENCES episodes(id) ON DELETE CASCADE,
+      movie_id UUID REFERENCES movies(id) ON DELETE CASCADE,
+      season_id UUID REFERENCES seasons(id) ON DELETE CASCADE,
+      show_id UUID REFERENCES shows(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (user_id, episode_id),
+      UNIQUE (user_id, movie_id),
+      UNIQUE (user_id, season_id),
+      UNIQUE (user_id, show_id)
+    );
+  `);
+
+  // Notes
+  await query(`
+    CREATE TABLE IF NOT EXISTS notes (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      content TEXT NOT NULL,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      episode_id UUID REFERENCES episodes(id) ON DELETE CASCADE,
+      movie_id UUID REFERENCES movies(id) ON DELETE CASCADE,
+      season_id UUID REFERENCES seasons(id) ON DELETE CASCADE,
+      show_id UUID REFERENCES shows(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  // Watch progress (global, not per-user to match prior schema)
+  await query(`
+    CREATE TABLE IF NOT EXISTS watch_progress (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      watched BOOLEAN NOT NULL DEFAULT false,
+      episode_id UUID UNIQUE REFERENCES episodes(id) ON DELETE CASCADE,
+      movie_id UUID UNIQUE REFERENCES movies(id) ON DELETE CASCADE,
+      season_id UUID UNIQUE REFERENCES seasons(id) ON DELETE CASCADE,
+      show_id UUID UNIQUE REFERENCES shows(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+}
 
 // Install CinemagoerNG if needed
 try {
@@ -43,6 +179,18 @@ from datetime import datetime
 from decimal import Decimal
 
 from cinemagoerng import web  # Using CinemagoerNG
+
+# Debugging control
+DEBUG = True
+def dbg(msg):
+    if DEBUG:
+        try:
+            print(msg)
+        except Exception:
+            try:
+                print(str(msg))
+            except Exception:
+                pass
 
 def dump_attrs(obj, label, show_values=False):
     try:
@@ -152,11 +300,15 @@ def fetch_show_and_episodes(imdb_id, order, max_seasons=25):
         # Fetch series metadata (try reference, then fallback to main)
         meta = None
         try:
+            dbg(f"[META] fetching reference page for {imdb_id}")
             meta = web.get_title(imdb_id=imdb_id, page="reference")
+            dbg(f"[META] reference fetched type={type(meta)} title={getattr(meta,'title',None)} has_imdb_id={hasattr(meta,'imdb_id')}")
         except Exception as e:
             print(f"Error fetching reference page for {imdb_id}: {e}. Falling back to main page...")
             try:
+                dbg(f"[META] fetching main page for {imdb_id}")
                 meta = web.get_title(imdb_id=imdb_id, page="main")
+                dbg(f"[META] main fetched type={type(meta)} title={getattr(meta,'title',None)} has_imdb_id={hasattr(meta,'imdb_id')}")
             except Exception as e2:
                 print(f"Error fetching main page for {imdb_id}: {e2}")
                 return result
@@ -200,18 +352,25 @@ def fetch_show_and_episodes(imdb_id, order, max_seasons=25):
         # Seasons and episodes
         for season_number in range(1, max_seasons + 1):
             season_str = str(season_number)
+            dbg(f"[SEASON] fetching episodes page imdb_id={imdb_id} season={season_str}")
             series = web.get_title(imdb_id=imdb_id, page="episodes", season=season_str)
+            dbg(f"[SEASON] fetched type={type(series)} has_attr_episodes={hasattr(series,'episodes')}")
             if not hasattr(series, 'episodes') or season_str not in series.episodes or not series.episodes[season_str]:
                 print(f"[SEASON] {title} S{season_number:02}: no episodes found; stopping.")
                 break
 
             episodes_for_season = series.episodes[season_str]
+            try:
+                dbg(f"[SEASON] {title} S{season_number:02}: episodes_count={len(episodes_for_season)} keys_sample={(list(episodes_for_season.keys())[:3])}")
+            except Exception:
+                pass
             # Minimal logging only
             # print(f"[SEASON] {title} S{season_number:02}: episode_count={len(episodes_for_season)}")
             # Determine default per-episode runtime from series meta if available
             default_ep_runtime = None
             try:
                 default_ep_runtime = normalize_runtime(getattr(meta, 'runtime', None))
+                dbg(f"[SEASON] default_ep_runtime={default_ep_runtime}")
             except Exception:
                 default_ep_runtime = None
             season_data = {'number': season_number, 'imdbRating': None, 'episodes': [], 'runtime': None}
@@ -250,7 +409,9 @@ def fetch_show_and_episodes(imdb_id, order, max_seasons=25):
                 # If not found, try fetching episode details page (silent on errors)
                 if ep_runtime is None and hasattr(ep, 'imdb_id') and getattr(ep, 'imdb_id'):
                     try:
-                        ep_full = web.get_title(imdb_id=getattr(ep, 'imdb_id'))
+                        ep_full_id = getattr(ep, 'imdb_id')
+                        dbg(f"[EP] fetch details imdb_id={ep_full_id} for S{season_number:02}E{getattr(ep,'episode', '')}")
+                        ep_full = web.get_title(imdb_id=ep_full_id)
                         for attr in ('running_time', 'runtime', 'runtimes', 'runtime_minutes', 'duration'):
                             if hasattr(ep_full, attr):
                                 ep_runtime = normalize_runtime(getattr(ep_full, attr))
@@ -264,6 +425,10 @@ def fetch_show_and_episodes(imdb_id, order, max_seasons=25):
                 if ep_runtime:
                     season_total_runtime += ep_runtime
                     season_has_runtime = True
+                try:
+                    dbg(f"[EP] S{season_number:02}E{getattr(ep,'episode', '')}: title={ep_title} rating={ep_rating} runtime={ep_runtime} air_date={air_date} has_imdb_id={hasattr(ep,'imdb_id')}")
+                except Exception:
+                    pass
                 # Minimal logging only
 
                 episode_data = {
@@ -507,32 +672,25 @@ async function downloadImage(url, prefix) {
   }
 }
 
-// Function to update or create a Show
+// Function to update or create a Show (SQL upsert)
 async function upsertShow(showData) {
   const { title, description, order, artworkUrl, imdbRating, runtime } = showData;
-  
   try {
-    console.log(`[UPSERT SHOW] ${title} input.runtime=${runtime}`)
-    const show = await prisma.show.upsert({
-      where: { title },
-      update: {
-        description,
-        order,
-        artworkUrl,
-        imdbRating,
-        runtime: runtime ?? undefined,
-      },
-      create: {
-        title,
-        description,
-        order,
-        artworkUrl,
-        imdbRating,
-        runtime: runtime ?? undefined,
-      },
-    });
-    
-    console.log(`[UPSERT SHOW] ${title} saved.runtime=${show.runtime}`)
+    console.log(`[UPSERT SHOW] ${title} input.runtime=${runtime}`);
+    const res = await query(
+      `INSERT INTO shows (title, description, "order", artwork_url, imdb_rating, runtime)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (title) DO UPDATE SET
+         description = EXCLUDED.description,
+         "order" = EXCLUDED."order",
+         artwork_url = EXCLUDED.artwork_url,
+         imdb_rating = EXCLUDED.imdb_rating,
+         runtime = EXCLUDED.runtime
+       RETURNING id, title, description, "order", artwork_url AS "artworkUrl", imdb_rating AS "imdbRating", runtime;`,
+      [title, description ?? null, order ?? null, artworkUrl ?? null, imdbRating ?? null, runtime ?? null]
+    );
+    const show = res.rows[0];
+    console.log(`[UPSERT SHOW] ${title} saved.runtime=${show.runtime}`);
     return show;
   } catch (error) {
     console.error(`Error upserting show ${title}:`, error);
@@ -540,32 +698,22 @@ async function upsertShow(showData) {
   }
 }
 
-// Function to update or create a Season
+// Function to update or create a Season (SQL upsert)
 async function upsertSeason(seasonData, showId) {
   const { number, imdbRating, runtime } = seasonData;
-  
   try {
-    console.log(`[UPSERT SEASON] showId=${showId} S${number} input.runtime=${runtime}`)
-    const season = await prisma.season.upsert({
-      where: {
-        showId_number: {
-          showId,
-          number,
-        },
-      },
-      update: {
-        imdbRating,
-        runtime: runtime ?? undefined,
-      },
-      create: {
-        number,
-        imdbRating,
-        runtime: runtime ?? undefined,
-        showId,
-      },
-    });
-    
-    console.log(`[UPSERT SEASON] showId=${showId} S${number} saved.runtime=${season.runtime}`)
+    console.log(`[UPSERT SEASON] showId=${showId} S${number} input.runtime=${runtime}`);
+    const res = await query(
+      `INSERT INTO seasons (number, show_id, imdb_rating, runtime)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (show_id, number) DO UPDATE SET
+         imdb_rating = EXCLUDED.imdb_rating,
+         runtime = EXCLUDED.runtime
+       RETURNING id, number, imdb_rating AS "imdbRating", runtime, show_id AS "showId";`,
+      [number, showId, imdbRating ?? null, runtime ?? null]
+    );
+    const season = res.rows[0];
+    console.log(`[UPSERT SEASON] showId=${showId} S${number} saved.runtime=${season.runtime}`);
     return season;
   } catch (error) {
     console.error(`Error upserting season ${number} for show ${showId}:`, error);
@@ -573,43 +721,28 @@ async function upsertSeason(seasonData, showId) {
   }
 }
 
-// Function to update or create an Episode
+// Function to update or create an Episode (SQL upsert)
 async function upsertEpisode(episodeData, seasonId) {
   const { title, episodeNumber, airDate, artworkUrl, imdbRating, description, runtime } = episodeData;
-  const episodeNumberInt =
-    episodeNumber != null && episodeNumber !== "" ? parseInt(episodeNumber, 10) : null;
-  
+  const episodeNumberInt = episodeNumber != null && episodeNumber !== "" ? parseInt(episodeNumber, 10) : null;
   try {
     const safeTitle = title && String(title).trim().length > 0 ? title : `Episode ${episodeNumberInt ?? ''}`;
-    console.log(`[UPSERT EPISODE] seasonId=${seasonId} E${episodeNumberInt} input.runtime=${runtime}`)
-    const episode = await prisma.episode.upsert({
-      where: {
-        seasonId_episodeNumber: {
-          seasonId,
-          episodeNumber: episodeNumberInt,
-        },
-      },
-      update: {
-        title: safeTitle,
-        airDate: airDate ? new Date(airDate) : null,
-        artworkUrl,
-        imdbRating,
-        description,
-        runtime: runtime ?? undefined,
-      },
-      create: {
-        title: safeTitle,
-        episodeNumber: episodeNumberInt,
-        airDate: airDate ? new Date(airDate) : null,
-        artworkUrl,
-        imdbRating,
-        description,
-        runtime: runtime ?? undefined,
-        seasonId,
-      },
-    });
-    
-    console.log(`[UPSERT EPISODE] seasonId=${seasonId} E${episodeNumberInt} saved.runtime=${episode.runtime}`)
+    console.log(`[UPSERT EPISODE] seasonId=${seasonId} E${episodeNumberInt} input.runtime=${runtime}`);
+    const res = await query(
+      `INSERT INTO episodes (title, episode_number, season_id, air_date, artwork_url, imdb_rating, description, runtime)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (season_id, episode_number) DO UPDATE SET
+         title = EXCLUDED.title,
+         air_date = EXCLUDED.air_date,
+         artwork_url = EXCLUDED.artwork_url,
+         imdb_rating = EXCLUDED.imdb_rating,
+         description = EXCLUDED.description,
+         runtime = EXCLUDED.runtime
+       RETURNING id, title, episode_number AS "episodeNumber", season_id AS "seasonId", air_date AS "airDate", artwork_url AS "artworkUrl", imdb_rating AS "imdbRating", description, runtime;`,
+      [safeTitle, episodeNumberInt, seasonId, airDate ? new Date(airDate) : null, artworkUrl ?? null, imdbRating ?? null, description ?? null, runtime ?? null]
+    );
+    const episode = res.rows[0];
+    console.log(`[UPSERT EPISODE] seasonId=${seasonId} E${episodeNumberInt} saved.runtime=${episode.runtime}`);
     return episode;
   } catch (error) {
     console.error(`Error upserting episode ${title} (${episodeNumber}) for season ${seasonId}:`, error);
@@ -617,34 +750,26 @@ async function upsertEpisode(episodeData, seasonId) {
   }
 }
 
-// Function to update or create a Movie
+// Function to update or create a Movie (SQL upsert)
 async function upsertMovie(movieData) {
   const { title, releaseDate, description, order, artworkUrl, imdbRating, runtime } = movieData;
-  
   try {
-    console.log(`[UPSERT MOVIE] ${title} input.runtime=${runtime}`)
-    const movie = await prisma.movie.upsert({
-      where: { title },
-      update: {
-        releaseDate: releaseDate ? new Date(releaseDate) : null,
-        description,
-        order,
-        artworkUrl,
-        imdbRating,
-        runtime: runtime ?? undefined,
-      },
-      create: {
-        title,
-        releaseDate: releaseDate ? new Date(releaseDate) : null,
-        description,
-        order,
-        artworkUrl,
-        imdbRating,
-        runtime: runtime ?? undefined,
-      },
-    });
-    
-    console.log(`[UPSERT MOVIE] ${title} saved.runtime=${movie.runtime}`)
+    console.log(`[UPSERT MOVIE] ${title} input.runtime=${runtime}`);
+    const res = await query(
+      `INSERT INTO movies (title, release_date, description, "order", artwork_url, imdb_rating, runtime)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (title) DO UPDATE SET
+         release_date = EXCLUDED.release_date,
+         description = EXCLUDED.description,
+         "order" = EXCLUDED."order",
+         artwork_url = EXCLUDED.artwork_url,
+         imdb_rating = EXCLUDED.imdb_rating,
+         runtime = EXCLUDED.runtime
+       RETURNING id, title, release_date AS "releaseDate", description, "order", artwork_url AS "artworkUrl", imdb_rating AS "imdbRating", runtime;`,
+      [title, releaseDate ? new Date(releaseDate) : null, description ?? null, order ?? null, artworkUrl ?? null, imdbRating ?? null, runtime ?? null]
+    );
+    const movie = res.rows[0];
+    console.log(`[UPSERT MOVIE] ${title} saved.runtime=${movie.runtime}`);
     return movie;
   } catch (error) {
     console.error(`Error upserting movie ${title}:`, error);
@@ -659,6 +784,8 @@ async function importFromPython() {
   
   console.log('Running Python script to import data...');
   try {
+    // Ensure schema exists before loading
+    await ensureSchema();
     // Execute the Python script to import data
     execSync(`python ${pythonScriptPath} import`, { stdio: 'inherit' });
     
@@ -739,7 +866,7 @@ async function main() {
     console.log('  monitor - Set up monitoring for new Star Trek content');
   }
   
-  await prisma.$disconnect();
+  await pool.end();
 }
 
 // Run the script
