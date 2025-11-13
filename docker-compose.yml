@@ -4,7 +4,6 @@ services:
   star-trek-ui:
     build:
       context: ./star-trek
-      dockerfile: ./Dockerfile_local
     ports:
       - "3000:3000"
     env_file:
