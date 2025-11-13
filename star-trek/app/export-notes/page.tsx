@@ -10,6 +10,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Download } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import remarkBreaks from "remark-breaks"
 
 interface Note {
   id: string
@@ -345,7 +347,7 @@ export default function ExportNotesPage() {
                                   <div className="text-sm text-orange-500 mb-2">By: {note.username}</div>
                                 )}
                                 <div className="prose prose-invert max-w-none text-sm">
-                                  <ReactMarkdown>{note.content}</ReactMarkdown>
+                                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{note.content}</ReactMarkdown>
                                 </div>
                               </div>
                             ))}

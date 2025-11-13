@@ -8,6 +8,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Download, Save } from "lucide-react"
 import { useRouter } from "next/navigation"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import remarkBreaks from "remark-breaks"
 
 interface NotesEditorProps {
   contentId: string
@@ -161,7 +163,7 @@ export function NotesEditor({ contentId, contentType }: NotesEditorProps) {
             <TabsContent value="preview">
               <div className="w-full h-64 p-4 bg-black border border-orange-500 rounded-lg overflow-auto">
                 <div className="prose prose-invert max-w-none">
-                  <ReactMarkdown>{userNote}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{userNote}</ReactMarkdown>
                 </div>
               </div>
             </TabsContent>
@@ -198,8 +200,8 @@ export function NotesEditor({ contentId, contentType }: NotesEditorProps) {
                     <div className="font-bold">{note.username}</div>
                     <div className="text-sm text-gray-400">{new Date(note.timestamp).toLocaleString()}</div>
                   </div>
-                  <div className="prose prose-invert max-w-none">
-                    <ReactMarkdown>{note.content}</ReactMarkdown>
+                  <div className="prose prose-invert max-w-none whitespace-pre-wrap">
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{note.content}</ReactMarkdown>
                   </div>
                 </div>
               ))}

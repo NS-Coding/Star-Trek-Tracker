@@ -59,6 +59,8 @@
     "react-markdown": "latest",
     "react-resizable-panels": "^2.1.7",
     "recharts": "latest",
+    "remark-breaks": "^4.0.0",
+    "remark-gfm": "^4.0.1",
     "sonner": "^1.7.1",
     "swr": "^2.2.0",
     "tailwind-merge": "^2.5.5",
