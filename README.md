@@ -1,126 +1,118 @@
 # Star Trek Tracker
 
-## Database
+## Overview
 
-This project uses Postgres (via Docker) and Prisma as the ORM. Follow these steps to create, populate, maintain, and back up the database.
+Star Trek Tracker is a Next.js app that tracks Star Trek series and movies, lets users mark progress, rate content, and analyze ratings with charts.
 
-### 1) Start Postgres (Docker)
-- Ensure Docker Desktop is running.
-- From the repo root:
-```bash
-docker compose up -d star-trek-db
-```
-- Connection defaults (see `docker-compose.yml`):
-  - Host: localhost
-  - Port: 5432
-  - DB: startrekdb
-  - User: postgres
-  - Password: postgres
+## Tech Stack
 
-### 2) Configure environment
-Create a `star-trek/.env` file with the Prisma connection string:
+- **Framework**: Next.js 15 (App Router)
+- **UI**: Tailwind CSS, Radix UI, shadcn/ui components
+- **Auth**: next-auth (Credentials provider, JWT sessions)
+- **DB**: PostgreSQL accessed via `pg` (node-postgres)
+- **Charts**: Recharts
+
+## Prerequisites
+
+- Node.js 18+
+- PostgreSQL 13+ reachable (local or remote)
+- Python 3 + pip (for data import helper)
+- Docker Desktop (optional, for running the app via docker-compose)
+
+## Environment Variables
+
+Create `star-trek/.env.local` (used by Next.js) with at least:
+
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/startrekdb?schema=public
-```
-
-### 3) Generate Prisma client and apply schema
-From the `star-trek/` directory:
-```bash
-# install deps (first time)
-npm install
-# generate Prisma client
-npx prisma generate
-# apply migrations (create schema)
-npx prisma migrate dev -n init
-```
-Alternatively, use package scripts:
-```bash
-npm run db:deploy   # for applying existing migrations in non-dev
-npm run db:migrate  # for dev workflow (prompts for migration name)
-```
-
-### 4) Populate database from IMDb
-We fetch metadata and images using a Python helper (CinemagoerNG) orchestrated by a Node script that upserts into Postgres.
-
-- Prerequisites:
-  - Python 3 available on PATH
-  - `pip` available on PATH
-
-- Run the import (from `star-trek/`):
-```bash
-node scripts/import-imdb-data.js import
-```
-What it does:
-- Ensures `cinemagoerng` is installed via `pip`.
-- Runs `scripts/imdb_fetch.py` to create JSON files in `star-trek/scripts/data/`.
-- Upserts shows, seasons, episodes, and movies into Postgres (safe to re-run; it updates existing and adds new records).
-
-### 5) Adding new shows or movies (future releases)
-Edit `star-trek/scripts/imdb_fetch.py` to include new items:
-- TV Series: update the `tv_series` dict (IMDB ID and `order`).
-- Movies: update the `movies` dict (IMDB ID and `order`).
-
-Example snippet (inside `import_star_trek_data()`):
-```python
-# Add a new series
-"Star Trek: New Frontier": {"imdb_id": "tt1234567", "order": 27},
-
-# Add a new movie
-"Star Trek: Prime Directive": {"imdb_id": "tt2345678", "order": 28},
-```
-Then re-run the import:
-```bash
-node scripts/import-imdb-data.js import
+DATABASE_URL=postgresql://USER:PASS@HOST:5432/startrekdb
+NEXTAUTH_SECRET=your-long-random-string
+# Optional: gate self-signup after the first admin
+INVITE_SECRET=your-invite-code
 ```
 
 Notes:
-- The import is idempotent. It uses Prisma upserts on title/season/episode to update or create records.
-- Artwork is downloaded into `star-trek/public/images/` and paths are saved in the DB.
+- The app reads `DATABASE_URL` and `NEXTAUTH_SECRET`. Registration uses `INVITE_SECRET` after the first user is created.
+- If you run via `docker compose`, also provide a root-level `.env` with the same vars so the container gets them.
 
-### 6) Updating existing shows when new episodes air
-No code changes required. Re-run the import to pull in new seasons/episodes that have appeared on IMDb:
+## Local Development
+
+From `star-trek/`:
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:3000.
+
+## Running with Docker
+
+From the repo root (uses `star-trek/Dockerfile`):
+
+```bash
+docker compose up -d
+```
+
+Ensure your root `.env` provides `DATABASE_URL`, `NEXTAUTH_SECRET`, and (optionally) `INVITE_SECRET` for the container.
+
+## Database Setup
+
+This project uses plain SQL via `pg` (no Prisma). The first data import will auto-create tables if they are missing. You can point `DATABASE_URL` to any Postgres instance you manage.
+
+If you don’t have Postgres locally, a quick disposable container:
+
+```bash
+docker run --name startrekdb -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=startrekdb -p 5432:5432 -d postgres:13
+```
+
+Set `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/startrekdb` accordingly.
+
+## Importing IMDb Data
+
+The importer fetches metadata and images using CinemagoerNG (Python) and loads data into Postgres via SQL upserts.
+
+- From `star-trek/`:
+
 ```bash
 node scripts/import-imdb-data.js import
 ```
-This will upsert seasons and episodes under existing shows.
 
-### 7) Browse the database (Prisma Studio)
-- With Docker DB running and `.env` set, from `star-trek/` run:
-```bash
-npx prisma studio
-```
-Or use the dockerized studio service (optional):
-```bash
-docker compose up -d prisma-studio
-# then open http://localhost:5555
-```
+What it does:
+- Installs/updates `cinemagoerng` via `pip` if needed
+- Generates JSON in `star-trek/scripts/data/`
+- Upserts shows, seasons, episodes, and movies
+- Downloads artwork to `star-trek/public/images/`
 
-### 8) Backup and restore
-Backup (creates `star-trek/backups/backup-<timestamp>.sql`):
-```bash
-cd star-trek
-node scripts/backup-database.js
-```
-- The script keeps the last 5 backups.
-- It uses environment vars if provided: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_HOST`, `POSTGRES_PORT`.
+### Updating for New Content
 
-Restore (manual command using `pg_restore`):
+Re-run the same import command to pull new seasons/episodes or additional titles configured in the script.
+
+### Adding New Titles
+
+Update the `tv_series` or `movies` maps in `star-trek/scripts/import-imdb-data.js` and re-run the import.
+
+## Authentication
+
+- Credentials login backed by the `users` table
+- First registered user becomes admin and is auto-approved
+- Subsequent registrations require `INVITE_SECRET`
+
+## Backup and Restore (manual)
+
+Use standard Postgres tools:
+
 ```bash
-# pick the backup file from star-trek/backups
-PGPASSWORD=postgres pg_restore \
-  -h localhost -p 5432 -U postgres \
-  -d startrekdb -c -v \
-  path/to/backup-<timestamp>.sql
-```
-If `pg_restore` is not available on PATH, install PostgreSQL client tools or use a Postgres docker container, e.g.:
-```bash
-docker run --rm -e PGPASSWORD=postgres \
-  -v "$(pwd)/star-trek/backups:/backups" \
-  --network host postgres:13 \
-  pg_restore -h localhost -p 5432 -U postgres -d startrekdb -c -v /backups/backup-<timestamp>.sql
+# backup
+pg_dump "${DATABASE_URL}" > backup.sql
+
+# restore (creates/overwrites objects in target DB)
+psql "${DATABASE_URL}" -f backup.sql
 ```
 
-### 9) Troubleshooting
-- Cannot connect: ensure `docker compose ps` shows `star-trek-db` healthy and that port 5432 is free.
-- Prisma errors: check `DATABASE_URL` in `star-trek/.env` and re-run `npx prisma generate`.
-- Import errors: ensure Python 3 + `pip` are available and try again. Check console for missing system dependencies.
+Alternatively, run these inside a `postgres` Docker container if you don’t have client tools installed.
+
+## Troubleshooting
+
+- **DB connection errors**: verify `DATABASE_URL` and that Postgres is reachable on the host/port.
+- **Auth issues**: ensure `NEXTAUTH_SECRET` is set. In production, also set `NEXTAUTH_URL` to your site URL.
+- **Import failures**: verify Python 3 + `pip` are installed; check console output for missing system libs.
