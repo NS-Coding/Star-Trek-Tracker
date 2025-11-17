@@ -3,6 +3,7 @@ FROM node:20-alpine as builder
 WORKDIR /app
 COPY . .
 RUN npm install
+RUN apt-get update && apt-get install -y curl wget
 RUN npm run build
 
 FROM node:20-alpine as runner
