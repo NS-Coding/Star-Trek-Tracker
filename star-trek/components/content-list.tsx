@@ -32,6 +32,7 @@ interface ContentItem {
   averageAggregateRating?: number
   imagePath?: string
   hasUserNote?: boolean
+  episodeNumber?: number
   children?: ContentItem[]
 }
 
@@ -437,7 +438,9 @@ export function ContentList({
                                                 href={`/content/${episode.type}/${episode.id}`}
                                                 className="hover:text-orange-400 transition-colors"
                                               >
-                                                {episode.title}
+                                                {episode.order !== undefined
+                                                  ? `E${String(episode.order).padStart(2, '0')}: ${episode.title}`
+                                                  : episode.title}
                                               </Link>
                                             </div>
                                           </div>
