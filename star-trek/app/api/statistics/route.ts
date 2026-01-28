@@ -213,6 +213,49 @@ export async function POST(req: Request) {
   , params)
   const userComparison = userCompareRes.rows.map(r => ({ user: r.username, order: r.ord, rating: r.avg, title: r.title || `Order ${r.ord}` }))
 
+  // IMDb comparison series: include IMDb rating as a pseudo-user for any item that has at least one user rating
+  // Build a set of orders with at least one rating (respecting the same ord definition)
+  const imdbRowsRes = await query<{ ord: number; imdb: number | null; title: string | null }>(
+    `WITH rated AS (
+       SELECT DISTINCT
+         CASE
+           WHEN e.id IS NOT NULL THEN (COALESCE(sh."order", 0) * 10000 + COALESCE(s.number, 0) * 100 + COALESCE(e.episode_number, 0))
+           WHEN m.id IS NOT NULL THEN (COALESCE(m."order", 0) * 10000)
+           ELSE NULL
+         END AS ord
+       FROM ratings r
+       LEFT JOIN episodes e ON r.episode_id = e.id
+       LEFT JOIN seasons s ON e.season_id = s.id
+       LEFT JOIN shows sh ON s.show_id = sh.id
+       LEFT JOIN movies m ON r.movie_id = m.id
+       WHERE r.value IS NOT NULL
+     )
+     , imdb_ep AS (
+       SELECT
+         (COALESCE(sh."order", 0) * 10000 + COALESCE(s.number, 0) * 100 + COALESCE(e.episode_number, 0)) AS ord,
+         e.imdb_rating AS imdb,
+         e.title AS title
+       FROM episodes e
+       JOIN seasons s ON e.season_id = s.id
+       JOIN shows sh ON s.show_id = sh.id
+     )
+     , imdb_mv AS (
+       SELECT
+         (COALESCE(m."order", 0) * 10000) AS ord,
+         m.imdb_rating AS imdb,
+         m.title AS title
+       FROM movies m
+     )
+     SELECT ord, imdb, title FROM imdb_ep WHERE imdb IS NOT NULL AND ord IN (SELECT ord FROM rated)
+     UNION ALL
+     SELECT ord, imdb, title FROM imdb_mv WHERE imdb IS NOT NULL AND ord IN (SELECT ord FROM rated)
+     ORDER BY ord`
+  )
+  const imdbComparison = imdbRowsRes.rows.map(r => ({ user: 'IMDb', order: r.ord, rating: Math.round((r.imdb ?? 0) * 10) / 10, title: r.title || `Order ${r.ord}` }))
+
+  // Combine IMDb series with user series for the User Comparison chart only
+  const userComparisonAll = userComparison.concat(imdbComparison)
+
   // Series bands (episode ranges per show) for background shading
   let seriesBands: { title: string, start: number, end: number }[] = []
   if (includeShows) {
@@ -325,7 +368,7 @@ export async function POST(req: Request) {
     },
     distribution,
     trend,
-    userComparison,
+    userComparison: userComparisonAll,
     progressBySeries,
     activity,
     usersAverage,
