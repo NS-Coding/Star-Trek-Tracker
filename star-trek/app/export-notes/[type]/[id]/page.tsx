@@ -231,7 +231,7 @@ export default function ExportNotesPage() {
                           <div className="text-sm text-gray-400">{formatDate(note.timestamp)}</div>
                         </div>
                         {includeOtherUsers && <div className="text-sm text-orange-500 mb-2">By: {note.username}</div>}
-                        <div className="prose prose-invert max-w-none text-sm">
+                        <div className="prose prose-invert max-w-none text-sm whitespace-pre-wrap">
                           <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{note.content}</ReactMarkdown>
                         </div>
                       </div>

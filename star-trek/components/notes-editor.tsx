@@ -162,7 +162,7 @@ export function NotesEditor({ contentId, contentType }: NotesEditorProps) {
             </TabsContent>
             <TabsContent value="preview">
               <div className="w-full h-64 p-4 bg-black border border-orange-500 rounded-lg overflow-auto">
-                <div className="prose prose-invert max-w-none">
+                <div className="prose prose-invert max-w-none whitespace-pre-wrap">
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{userNote}</ReactMarkdown>
                 </div>
               </div>
