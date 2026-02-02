@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -76,6 +77,19 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
               <span>{error}</span>
             </div>
           )}
+
+          <p className="mt-4 text-xs text-muted-foreground">
+            By signing in, you agree to our {""}
+            <Link
+              href="/legal"
+              className="underline"
+              onClick={(e) => {
+                e.stopPropagation()
+              }}
+            >
+              Terms of Service & Privacy
+            </Link>.
+          </p>
         </form>
       </CardContent>
       <CardFooter>

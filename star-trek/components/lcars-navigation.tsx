@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, BarChart2, User, LogOut, Download } from "lucide-react"
+import { Home, BarChart2, User, LogOut, Download, FileText } from "lucide-react"
 
 interface LcarsNavigationProps {
   isOpen: boolean
@@ -36,6 +36,12 @@ export function LcarsNavigation({ isOpen }: LcarsNavigationProps) {
       href: "/export-notes",
       icon: <Download className="h-5 w-5" />,
       active: pathname.startsWith("/export-notes"),
+    },
+    {
+      name: "Legal Disclosures",
+      href: "/legal",
+      icon: <FileText className="h-5 w-5" />,
+      active: pathname === "/legal",
     },
   ]
 

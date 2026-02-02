@@ -12,9 +12,12 @@ function isTokenValid(token: any) {
 export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
   const isAuth = isTokenValid(token)
-  const isLogin = req.nextUrl.pathname === "/login"
+  const path = req.nextUrl.pathname
+  const isLogin = path === "/login"
+  const isLegal = path === "/legal"
 
-  if (!isAuth && !isLogin) {
+  // Allow public access to login and legal pages
+  if (!isAuth && !isLogin && !isLegal) {
     return NextResponse.redirect(new URL("/login", req.url))
   }
 

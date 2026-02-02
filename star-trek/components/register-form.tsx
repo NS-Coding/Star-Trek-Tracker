@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -121,6 +122,19 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
             <Info className="h-4 w-4" />
             <span>Registration requires admin approval before you can log in.</span>
           </div>
+
+          <p className="mt-4 text-xs text-muted-foreground">
+            By signing up, you agree to our {""}
+            <Link
+              href="/legal"
+              className="underline"
+              onClick={(e) => {
+                e.stopPropagation()
+              }}
+            >
+              Terms of Service & Privacy
+            </Link>.
+          </p>
         </CardContent>
         <CardFooter>
           <Button className="lcars-button w-full" type="submit" disabled={loading}>
